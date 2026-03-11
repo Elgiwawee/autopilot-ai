@@ -65,3 +65,32 @@ Processes metrics using background workers powered by Celery and Redis.
 Generates automated scaling and cost optimization suggestions.
 
 
+## Setup
+
+### Backend
+
+cd backend
+pip install -r requirements.txt
+python manage.py runserver
+
+
+cd autopilot-dashboard
+npm install
+npm run dev
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
