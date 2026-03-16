@@ -11,7 +11,8 @@ The system collects infrastructure metrics, processes them using AI-assisted ana
 
 The platform is built as a distributed microservice architecture with an asynchronous analysis engine powered by Celery workers and Redis queues.
 
-Problem
+
+# Problem
 
 
 Cloud infrastructure costs can increase rapidly due to:
@@ -36,7 +37,8 @@ Real-time usage monitoring
 Intelligent cost optimization recommendations
 
 
-Core Features
+# Core Features
+
 Multi-Cloud Cost Analysis
 
 
@@ -51,7 +53,7 @@ Microsoft Azure
 AI-Powered Optimization
 
 
-Detects:
+# Detects:
 
 Underutilized instances
 
@@ -64,7 +66,7 @@ Idle network resources
 Automated Cost Recommendations
 
 
-The system generates suggestions such as:
+# The system generates suggestions such as:
 
 Instance resizing
 
@@ -77,7 +79,7 @@ Autoscaling optimization
 Background Infrastructure Analysis
 
 
-Cloud metrics are processed asynchronously using:
+# Cloud metrics are processed asynchronously using:
 
 Celery distributed workers
 
@@ -86,7 +88,7 @@ Redis message broker
 Real-Time Dashboard
 
 
-A modern React dashboard displays:
+# A modern React dashboard displays:
 
 Cost analytics
 
@@ -99,7 +101,7 @@ Monitoring insights
 Microservice Architecture
 
 
-The platform separates core services including:
+# The platform separates core services including:
 
 Cloud integrations
 
@@ -112,8 +114,10 @@ Billing analytics
 Audit logging
 
 
-Tech Stack
-Backend
+# Tech Stack
+
+```
+Backend :
 
 Python
 
@@ -127,16 +131,19 @@ Redis
 
 Celery
 
-Frontend
+
+Frontend:
 
 React
 
 Vite.js
 
 TailwindCSS
+```
 
-Infrastructure
+# Infrastructure
 
+```
 Docker
 
 Kubernetes
@@ -154,13 +161,14 @@ Git
 GitHub
 
 Docker Compose
+```
 
-System Architecture
+# System Architecture
 
 The system is divided into three primary layers.
 
 
-1️⃣ Data Collection Layer
+# 1️⃣ Data Collection Layer
 
 Responsible for collecting infrastructure metrics from cloud providers.
 
@@ -171,6 +179,7 @@ AWS APIs
 GCP APIs
 
 Azure APIs
+
 
 Collected metrics include:
 
@@ -183,9 +192,10 @@ Network traffic
 Instance performance
 
 
-2️⃣ Analysis Engine
+# 2️⃣ Analysis Engine
 
 The analysis engine processes collected data using asynchronous workers.
+
 
 Technologies used:
 
@@ -207,9 +217,10 @@ Evaluate cost impact
 Generate optimization insights
 
 
-3️⃣ Recommendation Engine
+# 3️⃣ Recommendation Engine
 
 This layer transforms analysis results into actionable insights.
+
 
 Example recommendations:
 
@@ -249,11 +260,11 @@ autopilot-ai
 └── README.md
 ```
 
-Backend Architecture
+# Backend Architecture
 
 The Django backend is modularized into specialized services.
 
-
+```
 Accounts
 
 User authentication and access management.
@@ -287,9 +298,9 @@ Maintains logs for infrastructure changes and optimization actions.
 Control Plane
 
 Coordinates communication between services.
+```
 
-
-System Architecture Diagram
+# System Architecture Diagram
 
                        ┌──────────────────────┐
                        │      React Dashboard │
@@ -328,8 +339,9 @@ System Architecture Diagram
 
 
 
-Installation
+# Installation
 
+```
 Clone Repository
 
 git clone https://github.com/Elgiwawee/autopilot-ai.git
@@ -373,9 +385,10 @@ Celery workers handle infrastructure analysis tasks.
 
 celery -A config worker -l info
 ⚠️ Redis must be running before starting Celery.
+```
 
+# Future Improvements
 
-Future Improvements
 
 Planned improvements include:
 
@@ -389,16 +402,17 @@ Machine learning-based optimization models
 
 
 
-License
+# License
 
+```
 MIT License
+```
 
 
+# Author
 
-Author
-
+```
 Zaharaddeen Umar
-
-Terminate idle services
+```
 
 Adjust autoscaling rules
