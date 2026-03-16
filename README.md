@@ -1,4 +1,9 @@
-AI Cloud Cost Autopilot
+# AI Cloud Cost Autopilot
+
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![Django](https://img.shields.io/badge/Django-REST-green)
+![React](https://img.shields.io/badge/React-Frontend-blue)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
 AI Cloud Cost Autopilot is an intelligent infrastructure optimization platform designed to analyze cloud resource usage across multiple providers and automatically generate cost-saving recommendations.
 
@@ -213,8 +218,9 @@ Downscale unused compute resources
 Move cold storage to cheaper tiers
 
 
-Project Structure
+## Project Structure
 
+```
 autopilot-ai
 │
 ├── backend
@@ -241,7 +247,7 @@ autopilot-ai
 │   │   └── routes
 │
 └── README.md
-
+```
 
 Backend Architecture
 
