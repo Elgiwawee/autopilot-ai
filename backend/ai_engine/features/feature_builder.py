@@ -27,6 +27,19 @@ def build_feature_row(plan, utilization, decision, outcome=None):
 
 def store_resource_features(plan, utilization, decision, outcome=None):
 
-    data = build_feature_row(plan, utilization, decision, outcome)
+    ResourceFeature.objects.create(
+        resource_id=str(plan.resource.id),
+        resource_type=plan.resource.resource_type,
 
-    ResourceFeature.objects.create(**data)
+        cpu_avg=utilization.get("cpu_avg") or 0,
+        memory_avg=utilization.get("memory_avg") or 0,
+        network_avg=utilization.get("network_avg") or 0,
+
+        estimated_monthly_savings=plan.estimated_savings or 0,
+
+        risk_score=decision.risk_score,
+
+        execution_time_seconds=5,
+
+        action_success=(outcome.success if outcome else None),
+    )

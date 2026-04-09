@@ -37,7 +37,9 @@ class AWSProvider(CloudProviderInterface):
                     resources.append({
                         "resource_id": instance["InstanceId"],
                         "resource_type": "ec2_instance",
-                        "region": ec2.meta.region_name,
+                        "region": instance["Placement"]["AvailabilityZone"],
+                        "state": instance["State"]["Name"],   # ✅ ADD
+                        "cost_per_hour": 0,                   # (later pricing service)
                         "metadata": instance,
                     })
 
@@ -72,27 +74,33 @@ class AWSProvider(CloudProviderInterface):
 
         return records
 
-    def fetch_metrics(self, resource_ids, start_date, end_date):
+    def fetch_metrics(self, resource_ids, metric_name, start_date, end_date):
         cw = self.session.client("cloudwatch")
 
-        # Example: CPUUtilization
         metrics = []
+
         for rid in resource_ids:
             resp = cw.get_metric_statistics(
                 Namespace="AWS/EC2",
-                MetricName="CPUUtilization",
+                MetricName=metric_name,
                 Dimensions=[{"Name": "InstanceId", "Value": rid}],
                 StartTime=start_date,
                 EndTime=end_date,
                 Period=3600,
                 Statistics=["Average"],
             )
-            metrics.append({"resource_id": rid, "datapoints": resp["Datapoints"]})
+
+            datapoints = [
+                {
+                    "timestamp": dp["Timestamp"],
+                    "value": dp["Average"],
+                }
+                for dp in resp["Datapoints"]
+            ]
+
+            metrics.append({
+                "resource_id": rid,
+                "datapoints": datapoints,
+            })
 
         return metrics
-
-    def execute_action(self, action):
-        action.execute(self.session)
-
-    def rollback(self, action):
-        action.rollback(self.session)

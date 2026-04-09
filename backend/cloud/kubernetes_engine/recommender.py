@@ -1,3 +1,5 @@
+# cloud/kubernetes_engine/recommender.py
+
 def recommend_resources(metrics):
     cpu = max(metrics["cpu_p95"] * 1.25, 0.1)
     memory = max(metrics["memory_p95"] * 1.30, 128)

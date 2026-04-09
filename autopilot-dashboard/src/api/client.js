@@ -2,12 +2,14 @@
 
 import axios from "axios";
 
-
 const api = axios.create({
   baseURL: "/api/v1",
 });
 
-api.interceptors.request.use(config => {
+
+// Attach token + organization
+api.interceptors.request.use((config) => {
+
   const token = localStorage.getItem("token");
 
   if (token) {
@@ -22,5 +24,55 @@ api.interceptors.request.use(config => {
 
   return config;
 });
+
+
+// Auto refresh token
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+
+    const originalRequest = error.config;
+
+    if (
+      error.response &&
+      error.response.status === 401 &&
+      !originalRequest._retry
+    ) {
+
+      originalRequest._retry = true;
+
+      try {
+
+        const refresh = localStorage.getItem("refresh");
+
+        const res = await axios.post(
+          "http://127.0.0.1:8000/api/token/refresh/",
+          { refresh }
+        );
+
+        const newAccess = res.data.access;
+
+        localStorage.setItem("token", newAccess);
+
+        // update header
+        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+
+        return api(originalRequest);
+
+      } catch (refreshError) {
+
+        // refresh failed → logout
+        localStorage.removeItem("token");
+        localStorage.removeItem("refresh");
+
+        window.location.href = "/login";
+
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export default api;

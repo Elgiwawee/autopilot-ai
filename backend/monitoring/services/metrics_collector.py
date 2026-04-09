@@ -1,3 +1,5 @@
+#monitoring/services/metrics_collector.py
+
 from cloud.models import CloudResource
 from monitoring.collectors.aws_cloudwatch import collect_ec2_cpu_metrics
 
@@ -23,10 +25,15 @@ def collect_metrics(account):
             )
 
             if metrics:
+
                 collected.append(
                     {
                         "resource_id": resource.external_id,
-                        "values": metrics,
+                        "resource_type": resource.resource_type,
+                        "values": metrics["values"],
+                        "avg": metrics["avg"],
+                        "max": metrics["max"],
+                        "min": metrics["min"],
                     }
                 )
 

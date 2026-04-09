@@ -2,7 +2,7 @@
 
 export default function RecentActions({ actions }) {
   return (
-    <div className="bg-panel p-6 rounded-lg border border-border">
+    <div className="bg-surface p-6 rounded-lg border border-border">
       <h3 className="font-medium mb-4">Recent Actions</h3>
 
       {!actions.length && (

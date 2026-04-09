@@ -34,8 +34,18 @@ class AutopilotStatusView(APIView):
             cloud_account__in=accounts
         ).select_related("cloud_account")
 
+        active_accounts = settings.exclude(mode="OFF").count()
+
+        effective_status = (
+            "ACTIVE"
+            if safety.autopilot_enabled and active_accounts > 0
+            else "PAUSED"
+        )
+
         return Response({
             "autopilot_enabled": safety.autopilot_enabled,
+            "active_accounts": active_accounts,
+            "effective_status": effective_status,   # ✅ ADD THIS
             "accounts": [
                 {
                     "cloud_account_id": str(s.cloud_account.id),
@@ -105,9 +115,11 @@ class AutopilotRunView(APIView):
             cloud_account__in=accounts
         ).exclude(mode="OFF")
 
-        run_autopilot_for_org.delay(org.id)
+        run_autopilot_for_org(org.id)
         
         return Response({
             "status": "Autopilot execution triggered",
             "accounts_considered": active_autopilot_accounts.count()
         })
+    
+

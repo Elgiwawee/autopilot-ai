@@ -13,7 +13,6 @@ def utilization_profile(resource, days=14):
     return {
         "cpu_avg": metrics.filter(metric_name="cpu_avg").aggregate(avg=Avg("value"))["avg"],
         "cpu_max": metrics.filter(metric_name="cpu_max").aggregate(avg=Avg("value"))["avg"],
+        "memory_avg": metrics.filter(metric_name="memory_avg").aggregate(avg=Avg("value"))["avg"],
+        "network_avg": metrics.filter(metric_name="network_avg").aggregate(avg=Avg("value"))["avg"],
     }
-
-
-#  add: memory, network, IOPS

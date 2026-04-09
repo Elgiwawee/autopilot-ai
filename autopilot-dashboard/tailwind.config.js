@@ -1,20 +1,36 @@
 // tailwind.config.js
 
 export default {
+  darkMode: "class",
   content: ["./index.html", "./src/**/*.{js,jsx}"],
   theme: {
     extend: {
       colors: {
-        bg: "#0B1220",
-        panel: "#111827",
-        border: "#1F2937",
-        primary: "#38BDF8",
-        success: "#22C55E",
-        warning: "#F59E0B",
-        danger: "#EF4444",
-        muted: "#9CA3AF",
+        background: "var(--background)",
+        surface: "var(--surface)",
+        border: "var(--border)",
+
+        foreground: "var(--foreground)",
+        muted: "var(--muted)",
+
+        primary: "var(--primary)",
+        primarySoft: "var(--primarySoft)",
+
+        success: "var(--success)",
+        warning: "var(--warning)",
+        danger: "var(--danger)",
+      },
+
+      boxShadow: {
+        card: "0 1px 2px rgba(0,0,0,0.05)",
+        cardHover: "0 4px 12px rgba(0,0,0,0.08)",
+      },
+
+      borderRadius: {
+        xl: "0.75rem",
+        "2xl": "1rem",
       },
     },
   },
   plugins: [],
-}
+};

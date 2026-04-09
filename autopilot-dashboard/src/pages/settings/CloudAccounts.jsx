@@ -1,3 +1,5 @@
+// src/pages/settings/CloudAccounts.jsx
+
 import { useEffect, useState } from "react";
 import {
   fetchCloudAccounts,
@@ -15,12 +17,14 @@ export default function CloudAccountsPage() {
     provider_code: "aws",
     account_identifier: "",
     role_arn: "",
+    tenant_id: "",
+    client_id: "",
+    client_secret: "",
+    subscription_id: "",
+    project_id: "",
+    service_account_json: "",
     mode: "observe",
   });
-
-  useEffect(() => {
-    console.log("CloudAccountsPage mounted");
-  }, []);
 
   useEffect(() => {
     loadAccounts();
@@ -29,11 +33,9 @@ export default function CloudAccountsPage() {
   async function loadAccounts() {
     try {
       const res = await fetchCloudAccounts();
-      console.log("API response:", res);
-      setAccounts(res.results || []);
+      setAccounts(res || []);
     } catch (err) {
-      console.error("Failed to load cloud accounts", err);
-      setAccounts([]);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -44,17 +46,36 @@ export default function CloudAccountsPage() {
     setSubmitting(true);
 
     try {
-      const newAccount = await createCloudAccount(form);
+      const payload = { ...form };
+
+      // ✅ Parse JSON safely for GCP
+      if (form.provider_code === "gcp" && form.service_account_json) {
+        payload.service_account_json = JSON.parse(form.service_account_json);
+      }
+
+      const newAccount = await createCloudAccount(payload);
+
       setAccounts(prev => [...prev, newAccount]);
       setShowModal(false);
+
+      // reset
       setForm({
         provider_code: "aws",
         account_identifier: "",
         role_arn: "",
+        tenant_id: "",
+        client_id: "",
+        client_secret: "",
+        subscription_id: "",
+        project_id: "",
+        service_account_json: "",
         mode: "observe",
       });
+
+      alert("✅ Cloud account connected successfully");
     } catch (err) {
-      console.error("Failed to create account", err);
+      console.error(err);
+      alert("❌ Failed to connect account");
     } finally {
       setSubmitting(false);
     }
@@ -67,42 +88,129 @@ export default function CloudAccountsPage() {
       await disableCloudAccount(id);
       setAccounts(prev => prev.filter(acc => acc.id !== id));
     } catch (err) {
-      console.error("Failed to disable account", err);
+      console.error(err);
+    }
+  }
+
+  // ---------------------------------------
+  // 🎯 PROVIDER ICONS
+  // ---------------------------------------
+  const providerIcon = code => {
+    if (code === "aws") return "🟠";
+    if (code === "azure") return "🔵";
+    if (code === "gcp") return "🟢";
+    return "☁️";
+  };
+
+  // ---------------------------------------
+  // 🎯 PROVIDER DYNAMIC FIELDS
+  // ---------------------------------------
+  function ProviderFields() {
+    switch (form.provider_code) {
+      case "aws":
+        return (
+          <div>
+            <label className="text-sm">Role ARN</label>
+            <input
+              className="input"
+              placeholder="arn:aws:iam::123456789:role/..."
+              value={form.role_arn}
+              onChange={e =>
+                setForm({ ...form, role_arn: e.target.value })
+              }
+            />
+          </div>
+        );
+
+      case "azure":
+        return (
+          <div className="space-y-2">
+            <input
+              className="input"
+              placeholder="Tenant ID"
+              onChange={e =>
+                setForm({ ...form, tenant_id: e.target.value })
+              }
+            />
+            <input
+              className="input"
+              placeholder="Client ID"
+              onChange={e =>
+                setForm({ ...form, client_id: e.target.value })
+              }
+            />
+            <input
+              className="input"
+              placeholder="Client Secret"
+              onChange={e =>
+                setForm({ ...form, client_secret: e.target.value })
+              }
+            />
+            <input
+              className="input"
+              placeholder="Subscription ID"
+              onChange={e =>
+                setForm({ ...form, subscription_id: e.target.value })
+              }
+            />
+          </div>
+        );
+
+      case "gcp":
+        return (
+          <div className="space-y-2">
+            <input
+              className="input"
+              placeholder="Project ID"
+              onChange={e =>
+                setForm({ ...form, project_id: e.target.value })
+              }
+            />
+
+            <textarea
+              className="input h-28"
+              placeholder="Paste Service Account JSON"
+              value={form.service_account_json}
+              onChange={e =>
+                setForm({
+                  ...form,
+                  service_account_json: e.target.value,
+                })
+              }
+            />
+          </div>
+        );
+
+      default:
+        return null;
     }
   }
 
   return (
     <>
-      {/* Action Bar */}
+      {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
         <div className="text-sm text-muted">
           Manage connected cloud environments
         </div>
 
-        <button
-          onClick={() => setShowModal(true)}
-          className="btn-primary"
-        >
+        <button onClick={() => setShowModal(true)} className="btn-primary">
           + Connect Cloud Account
         </button>
       </div>
 
-      {/* Loading */}
+      {/* LOADING */}
       {loading ? (
-        <div className="text-muted">Loading cloud accounts…</div>
+        <div className="text-muted">Loading...</div>
       ) : accounts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="text-4xl mb-4">☁️</div>
-
+        <div className="text-center py-20">
+          <div className="text-5xl mb-4">☁️</div>
           <h2 className="text-lg font-semibold mb-2">
             No Cloud Accounts Connected
           </h2>
-
-          <p className="text-muted text-sm mb-6 max-w-sm">
-            Connect your first cloud account to start monitoring costs,
-            optimization opportunities and savings.
+          <p className="text-muted mb-4">
+            Connect your first account to start optimization
           </p>
-
           <button
             onClick={() => setShowModal(true)}
             className="btn-primary"
@@ -125,45 +233,34 @@ export default function CloudAccountsPage() {
 
           <tbody>
             {accounts.map(acc => (
-              <tr key={acc.id} className="border-b last:border-b-0">
-                <td className="py-3 capitalize font-medium">
-                  {acc.provider}
+              <tr key={acc.id} className="border-b">
+                <td className="py-3 flex items-center gap-2">
+                  {providerIcon(acc.provider_code)}
+                  <span className="capitalize">{acc.provider}</span>
                 </td>
 
                 <td className="py-3 font-mono text-sm">
                   {acc.account_identifier}
                 </td>
 
-                <td className="py-3">
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${
-                      acc.mode === "autopilot"
-                        ? "bg-success/10 text-success"
-                        : acc.mode === "recommend"
-                        ? "bg-warning/10 text-warning"
-                        : "bg-muted/20 text-muted"
-                    }`}
-                  >
-                    {acc.mode.toUpperCase()}
+                <td className="py-3 text-xs">
+                  <span className="px-2 py-1 bg-muted/20 rounded">
+                    {acc.mode}
                   </span>
                 </td>
 
-                <td className="py-3">
-                  <span className="text-success text-sm">
-                    ● {acc.status}
-                  </span>
+                <td className="py-3 text-success text-sm">
+                  ● {acc.status}
                 </td>
 
                 <td className="py-3 text-sm text-muted">
-                  {acc.created_at
-                    ? new Date(acc.created_at).toLocaleDateString()
-                    : "—"}
+                  {new Date(acc.created_at).toLocaleDateString()}
                 </td>
 
                 <td className="py-3 text-right">
                   <button
                     onClick={() => handleDisable(acc.id)}
-                    className="text-danger text-sm hover:underline"
+                    className="text-danger hover:underline text-sm"
                   >
                     Disable
                   </button>
@@ -174,75 +271,60 @@ export default function CloudAccountsPage() {
         </table>
       )}
 
-      {/* Modal */}
+      {/* MODAL */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-card rounded-lg w-full max-w-md p-6">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-surface p-6 rounded-lg w-full max-w-md">
             <h3 className="text-lg font-semibold mb-4">
               Connect Cloud Account
             </h3>
 
             <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="text-sm">Provider</label>
-                <select
-                  className="input"
-                  value={form.provider_code}
-                  onChange={e =>
-                    setForm({ ...form, provider_code: e.target.value })
-                  }
-                >
-                  <option value="aws">AWS</option>
-                  <option value="azure">Azure</option>
-                  <option value="gcp">GCP</option>
-                  <option value="kubernetes">Kubernetes</option>
-                </select>
-              </div>
 
-              <div>
-                <label className="text-sm">Account Identifier</label>
-                <input
-                  className="input"
-                  required
-                  value={form.account_identifier}
-                  onChange={e =>
-                    setForm({
-                      ...form,
-                      account_identifier: e.target.value,
-                    })
-                  }
-                />
-              </div>
+              {/* Provider */}
+              <select
+                className="input"
+                value={form.provider_code}
+                onChange={e =>
+                  setForm({ ...form, provider_code: e.target.value })
+                }
+              >
+                <option value="aws">AWS</option>
+                <option value="azure">Azure</option>
+                <option value="gcp">GCP</option>
+              </select>
 
-              <div>
-                <label className="text-sm">Role ARN (optional)</label>
-                <input
-                  className="input"
-                  value={form.role_arn}
-                  onChange={e =>
-                    setForm({
-                      ...form,
-                      role_arn: e.target.value,
-                    })
-                  }
-                />
-              </div>
+              {/* Account ID */}
+              <input
+                className="input"
+                placeholder="Account Identifier"
+                required
+                value={form.account_identifier}
+                onChange={e =>
+                  setForm({
+                    ...form,
+                    account_identifier: e.target.value,
+                  })
+                }
+              />
 
-              <div>
-                <label className="text-sm">Mode</label>
-                <select
-                  className="input"
-                  value={form.mode}
-                  onChange={e =>
-                    setForm({ ...form, mode: e.target.value })
-                  }
-                >
-                  <option value="observe">Observe</option>
-                  <option value="recommend">Recommend</option>
-                  <option value="autopilot">Autopilot</option>
-                </select>
-              </div>
+              {/* Dynamic Fields */}
+              <ProviderFields />
 
+              {/* Mode */}
+              <select
+                className="input"
+                value={form.mode}
+                onChange={e =>
+                  setForm({ ...form, mode: e.target.value })
+                }
+              >
+                <option value="observe">Observe</option>
+                <option value="recommend">Recommend</option>
+                <option value="autopilot">Autopilot</option>
+              </select>
+
+              {/* Actions */}
               <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"

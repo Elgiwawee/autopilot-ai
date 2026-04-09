@@ -43,49 +43,6 @@ def execute_k8s_rightsizing(self, execution_record_id):
 
 
 
-@shared_task(bind=True)
-def evaluate_canary(
-    self,
-    *,
-    execution_id,
-    metrics_before,
-    metrics_after,
-    policy,
-    k8s,
-    deployment_name,
-    namespace,
-    previous_spec,
-):
-    """
-    Decide whether to commit or rollback canary
-    """
-
-    verdict = observe_canary(
-        metrics_before=metrics_before,
-        metrics_after=metrics_after,
-        policy=policy,
-    )
-
-    if not verdict["success"]:
-        rollback_execution(
-            k8s=k8s,
-            deployment_name=deployment_name,
-            namespace=namespace,
-            previous_spec=previous_spec,
-            reason=verdict["reason"],
-            policy=policy,
-        )
-        return
-
-    generate_execution_receipt(
-        action="K8S_CANARY",
-        status="COMMITTED",
-        policy_id=policy.id,
-        target=f"{namespace}/{deployment_name}",
-        message="Canary passed health checks",
-    )
-
-
 def start_execution(plan):
     try:
         enforce_policies(plan)

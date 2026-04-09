@@ -1,16 +1,13 @@
+// src/api/policy.api.js
+
 import api from "./client";
 
-export const getPolicies = async () => {
-  const res = await api.get("/policies");
+export const getPolicy = async () => {
+  const res = await api.get("/policy/");
   return res.data;
 };
 
-export const createPolicy = async (payload) => {
-  const res = await api.post("/policies", payload);
-  return res.data;
-};
-
-export const togglePolicy = async (id, enabled) => {
-  const res = await api.patch(`/policies/${id}`, { enabled });
+export const updatePolicy = async (payload) => {
+  const res = await api.patch("/policy/", payload);
   return res.data;
 };

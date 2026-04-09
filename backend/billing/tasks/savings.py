@@ -1,6 +1,7 @@
 # billing/tasks/savings.py
 
 from celery import shared_task
+from ai_engine.reinforcement.trainer import RLTrainer
 from billing.models import CostSnapshot, BaselineSnapshot, SavingsEvent
 
 
@@ -29,3 +30,7 @@ def compute_savings_for_period(organization_id, cloud):
             action_id="AUTOPILOT",
             confidence=0.92,
         )
+
+        trainer = RLTrainer()
+        trainer.update(action_id=baseline.action_type)
+

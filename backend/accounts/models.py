@@ -1,10 +1,11 @@
 
 # accounts/models.py
 
-from django.db import models
+from django.utils import timezone
+from datetime import timedelta
 import uuid
+from django.db import models
 from django.conf import settings
-
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from .managers import UserManager
@@ -28,6 +29,12 @@ class User(AbstractBaseUser, PermissionsMixin):
 class Organization(models.Model):
     name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
+    region = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -56,6 +63,57 @@ class AWSAccount(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+class AzureAccount(models.Model):
+    cloud_account = models.OneToOneField(
+        "cloud.CloudAccount",
+        on_delete=models.CASCADE,
+        related_name="azure",
+    )
+
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="azure_accounts"
+    )
+
+    name = models.CharField(max_length=255)
+
+    tenant_id = models.CharField(max_length=255)
+    client_id = models.CharField(max_length=255)
+    client_secret = models.CharField(max_length=255)
+
+    subscription_id = models.CharField(max_length=255)
+
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Azure {self.subscription_id}"
+    
+
+class GCPAccount(models.Model):
+    cloud_account = models.OneToOneField(
+        "cloud.CloudAccount",
+        on_delete=models.CASCADE,
+        related_name="gcp",
+    )
+
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="gcp_accounts"
+    )
+
+    name = models.CharField(max_length=255)
+
+    project_id = models.CharField(max_length=255)
+    service_account_json = models.JSONField()
+
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"GCP {self.project_id}"
 
 
 class AutopilotPolicy(models.Model):
@@ -88,6 +146,9 @@ class AutopilotPolicy(models.Model):
     enable_kill_switch = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Policy - {self.organization.name}"
 
 
 class EBSVolume(models.Model):
@@ -180,3 +241,45 @@ class OrganizationMember(models.Model):
 
     class Meta:
         unique_together = ("organization", "user")
+
+
+def default_expiry():
+    return timezone.now() + timedelta(days=7)
+
+
+class OrganizationInvite(models.Model):
+    organization = models.ForeignKey(
+        "Organization",
+        on_delete=models.CASCADE,
+        related_name="invites"
+    )
+
+    email = models.EmailField()
+
+    role = models.CharField(
+        choices=[
+            ("ADMIN", "ADMIN"),
+            ("VIEWER", "VIEWER"),
+        ],
+        default="VIEWER"
+    )
+
+    token = models.UUIDField(default=uuid.uuid4, unique=True)
+
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="sent_invites"
+    )
+
+    accepted = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    expires_at = models.DateTimeField(default=default_expiry)
+
+    def is_valid(self):
+        return not self.accepted and timezone.now() < self.expires_at
+
+    def __str__(self):
+        return f"{self.email} invited to {self.organization.name}"

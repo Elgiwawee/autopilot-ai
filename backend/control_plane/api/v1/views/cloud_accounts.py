@@ -1,11 +1,12 @@
 # control_plane/aip/v1/views/cloud_accounts.py
 
+from accounts.models import AutopilotSettings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-
+from accounts.models import AWSAccount, AzureAccount, GCPAccount
 from cloud.models import CloudAccount, CloudProvider
 from control_plane.permissions.member import IsOrganizationMember
 from control_plane.tasks import discover_cloud_account
@@ -65,7 +66,49 @@ class CloudAccountListCreateView(APIView):
             mode=mode,
             is_active=True,
         )
-        # Trigger async infrastructure discovery
+
+        # ✅ CREATE PROVIDER-SPECIFIC CONFIG
+        if provider_code == "AWS":
+
+            AWSAccount.objects.create(
+                cloud_account=cloud_account,
+                organization=org,
+                name="AWS Account",
+                account_id=account_identifier,
+                role_arn=request.data.get("role_arn"),
+                external_id=request.data.get("external_id"),
+            )
+
+        elif provider_code == "AZURE":
+
+            AzureAccount.objects.create(
+                cloud_account=cloud_account,
+                organization=org,
+                name="Azure Account",
+                tenant_id=request.data.get("tenant_id"),
+                client_id=request.data.get("client_id"),
+                client_secret=request.data.get("client_secret"),
+                subscription_id=request.data.get("subscription_id"),
+            )
+
+        elif provider_code == "GCP":
+
+            GCPAccount.objects.create(
+                cloud_account=cloud_account,
+                organization=org,
+                name="GCP Account",
+                project_id=request.data.get("project_id"),
+                service_account_json=request.data.get("service_account_json"),
+            )
+
+        # ✅ AUTOPILOT DEFAULT
+        AutopilotSettings.objects.create(
+            cloud_account=cloud_account,
+            mode="AUTO_SAFE",
+            max_risk_allowed=0.25
+        )
+
+        # ✅ BACKGROUND DISCOVERY
         discover_cloud_account.delay(cloud_account.id)
 
         return Response(

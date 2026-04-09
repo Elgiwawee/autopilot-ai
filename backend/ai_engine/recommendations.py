@@ -1,6 +1,6 @@
 # ai_engine/recommendations.py
 
-from ai_engine.models import Recommendation
+from ai_engine.models.recommendation import Recommendation
 from ai_engine.idle_detection import detect_idle_ec2_instances
 
 

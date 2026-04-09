@@ -39,6 +39,8 @@ class GCPProvider(CloudProviderInterface):
                     "resource_type": "gce_instance",
                     "region": zone,
                     "metadata": instance.to_dict(),
+                    "state": instance.status,
+                    "cost_per_hour": 0,
                 })
 
         return resources

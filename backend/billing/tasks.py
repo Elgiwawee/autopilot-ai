@@ -16,8 +16,11 @@ def compute_savings(self, execution_id):
     plan = decision.plan
 
     account = plan.cloud_account
-    service = plan.resource_type
-    resource_id = plan.resource_id
+    resource = plan.resource
+
+    resource_id = resource.id
+    service = resource.service
+    account = resource.cloud_account
     region = execution.before_state.get("region")
     date = execution.finished_at.date()
 
@@ -73,4 +76,8 @@ def compute_savings(self, execution_id):
 
     # 💸 PLATFORM REVENUE (MANDATORY)
     create_revenue_share_from_ledger(ledger)
+
+    # 🚫 Prevent duplicate billing
+    if SavingsLedger.objects.filter(execution=execution).exists():
+        return
 

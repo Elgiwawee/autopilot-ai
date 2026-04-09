@@ -12,3 +12,4 @@ def collect_aws_ec2_task(self):
 
     for account in accounts:
         collect_ec2_instances(account.id)
+

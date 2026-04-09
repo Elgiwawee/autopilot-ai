@@ -5,10 +5,9 @@ from django.utils import timezone
 from django.db.models import Avg, Max
 from datetime import timedelta
 
-from ai_engine.models import Recommendation
 from accounts.models import GlobalSafety
 from cloud.models import CloudAccount
-
+from ai_engine.models.recommendation  import Recommendation
 
 @dataclass
 class AIStatusDTO:

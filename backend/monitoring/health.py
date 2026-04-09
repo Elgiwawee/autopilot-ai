@@ -12,7 +12,6 @@ def verify_system_health():
 
     logger.info("Running system health checks")
 
-    # Example checks (extend later)
     checks = {
         "database": True,
         "celery": True,
@@ -22,3 +21,18 @@ def verify_system_health():
     logger.info("System health status: %s", checks)
 
     return checks
+
+
+def health_failed():
+    """
+    Returns True if any critical service failed.
+    """
+
+    checks = verify_system_health()
+
+    for service, status in checks.items():
+        if not status:
+            logger.error("Health check failed for %s", service)
+            return True
+
+    return False

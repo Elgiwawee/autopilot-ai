@@ -73,18 +73,6 @@ class ActionApproval(models.Model):
 
 
 
-class Policy(models.Model):
-    organization = models.ForeignKey(
-    "accounts.Organization",
-    on_delete=models.CASCADE,
-    related_name="policies",
-)
-    max_cpu_reduction = models.IntegerField(default=30)
-    max_mem_reduction = models.IntegerField(default=20)
-    allow_spot = models.BooleanField(default=False)
-    autopilot_enabled = models.BooleanField(default=False)
-
-
 # actions/models.py
 
 class OptimizationPlan(models.Model):

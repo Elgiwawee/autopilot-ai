@@ -49,6 +49,8 @@ class AzureProvider(CloudProviderInterface):
                 "resource_type": "virtual_machine",
                 "region": vm.location,
                 "metadata": vm.as_dict(),
+                "state": vm.provisioning_state,
+                "cost_per_hour": 0,
             })
 
         return resources
@@ -78,6 +80,8 @@ class AzureProvider(CloudProviderInterface):
         records = []
         for row in result.rows:
             records.append({
+                "service": "azure_compute", 
+                "resource_id": None,# Azure Cost Management doesn't break down by service in the same way as AWS, so we use a generic service name
                 "date": row[0],
                 "cost": float(row[1]),
             })

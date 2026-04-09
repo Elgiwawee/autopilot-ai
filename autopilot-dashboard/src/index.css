@@ -1,3 +1,41 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 🌞 LIGHT MODE */
+:root {
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+
+  --foreground: #0f172a;
+  --muted: #64748b;
+
+  --primary: #2563eb;
+  --primarySoft: #dbeafe;
+
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+}
+
+/* 🌙 DARK MODE */
+.dark {
+  --background: #020617;     /* deep navy */
+  --surface: #0f172a;        /* panels */
+  --border: #1e293b;
+
+  --foreground: #f1f5f9;
+  --muted: #94a3b8;
+
+  --primary: #3b82f6;
+  --primarySoft: #1e3a8a;
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}

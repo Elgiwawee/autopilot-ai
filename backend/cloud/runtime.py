@@ -1,24 +1,17 @@
 # cloud/runtime.py
 
-from cloud.providers.aws import AWSProvider
-from cloud.providers.gcp import GCPProvider
-from cloud.providers.azure import AzureProvider
+from cloud.providers.factory import get_provider
 from cloud.control_planes.kubernetes import KubernetesControlPlane
 
 
-def get_runtime_handler(account_or_cluster):
-    provider = account_or_cluster.provider.name
+def get_runtime_handler(target):
+    """
+    Unified runtime resolver.
+    """
 
-    if provider == "aws":
-        return AWSProvider(account_or_cluster)
+    # ✅ Kubernetes path
+    if getattr(target, "is_kubernetes", False):
+        return KubernetesControlPlane(target)
 
-    if provider == "gcp":
-        return GCPProvider(account_or_cluster)
-
-    if provider == "azure":
-        return AzureProvider(account_or_cluster)
-
-    if provider == "kubernetes":
-        return KubernetesControlPlane(account_or_cluster)
-
-    raise ValueError(f"Unsupported provider: {provider}")
+    # ✅ Cloud provider path
+    return get_provider(target)

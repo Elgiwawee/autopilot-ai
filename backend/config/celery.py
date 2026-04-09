@@ -55,9 +55,19 @@ app.conf.beat_schedule = {
     },
     # Manual trigger for autopilot (can be called from API or admin)
     "run-autopilot-manual-trigger": {
-    "task": "control_plane.tasks.run_autopilot_for_org",
-    "schedule": crontab(minute="*/30"),
-    "args": (),
-},
+        "task": "control_plane.tasks.run_autopilot_for_org",
+        "schedule": crontab(minute="*/30"),
+        "args": (),
+    },
+
+    "collect-cloud-inventory": {
+        "task": "cloud.tasks.collect_inventory.collect_all_cloud_resources",
+        "schedule": crontab(minute="*/10"),
+    },
+    
+    "run-optimizer-every-10-minutes": {
+        "task": "actions.tasks.run_optimizer_scan",
+        "schedule": 600,
+    },
 
 }

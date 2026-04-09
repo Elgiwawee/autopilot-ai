@@ -36,4 +36,13 @@ def collect_ec2_cpu_metrics(resource, credentials):
 
         values.append(point["Average"])
 
-    return values
+    if values:
+        return {
+            "avg": sum(values) / len(values),
+            "max": max(values),
+            "min": min(values),
+            "samples": len(values),
+            "values": values,
+        }
+
+    return None

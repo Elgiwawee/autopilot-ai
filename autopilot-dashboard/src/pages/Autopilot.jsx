@@ -39,21 +39,52 @@ export default function Autopilot() {
   return (
     <div className="space-y-6">
 
+      {/* GLOBAL STATUS */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Autopilot Control</h1>
+
+        <span
+          className={`px-3 py-1 text-xs rounded-full font-medium ${
+            status.autopilot_enabled
+              ? "bg-green-500/20 text-green-400"
+              : "bg-red-500/20 text-red-400"
+          }`}
+        >
+          {status.autopilot_enabled ? "Autopilot Enabled" : "Autopilot Disabled"}
+        </span>
+      </div>
+
+      {/* WARNING */}
       {!status.autopilot_enabled && (
-        <div className="bg-red-100 text-red-700 p-4 rounded">
-          Autopilot is globally disabled
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-lg">
+          Autopilot is globally disabled. Enable it from Safety Settings.
         </div>
       )}
 
+      {/* ACCOUNTS */}
       {status.accounts.map(account => (
-        <Card key={account.cloud_account_id}
-              title={`Cloud Account ${account.cloud_account_id}`}>
-          
-          <p className="mb-2">
-            Current Mode: <strong>{account.mode}</strong>
-          </p>
+        <div
+          key={account.cloud_account_id}
+          className="bg-panel border border-border rounded-xl p-6 shadow-sm"
+        >
+          {/* HEADER */}
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="font-semibold text-base">
+                Cloud Account
+              </h2>
+              <p className="text-xs text-muted">
+                {account.cloud_account_id}
+              </p>
+            </div>
 
-          <div className="flex gap-2 flex-wrap">
+            <span className="text-xs text-muted">
+              Mode: <span className="font-medium text-white">{account.mode}</span>
+            </span>
+          </div>
+
+          {/* MODE SELECTOR */}
+          <div className="flex flex-wrap gap-2">
             {MODES.map(m => (
               <button
                 key={m}
@@ -61,27 +92,42 @@ export default function Autopilot() {
                 onClick={() =>
                   changeMode(account.cloud_account_id, m)
                 }
-                className={`btn ${
-                  account.mode === m ? "btn-primary" : ""
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+                  account.mode === m
+                    ? "bg-primary text-white"
+                    : "bg-border text-muted hover:bg-border/70"
+                } ${
+                  autoDisabled ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
-                {m}
+                {m.replace("_", " ")}
               </button>
             ))}
           </div>
-
-        </Card>
+        </div>
       ))}
 
-      <Card title="Manual Execution">
+      {/* MANUAL EXECUTION */}
+      <div className="bg-panel border border-border rounded-xl p-6 flex items-center justify-between">
+        <div>
+          <h2 className="font-semibold">Manual Execution</h2>
+          <p className="text-sm text-muted">
+            Trigger autopilot optimization immediately
+          </p>
+        </div>
+
         <button
           disabled={autoDisabled}
           onClick={runAutopilotNow}
-          className="btn btn-danger"
+          className={`px-5 py-2 rounded-lg text-sm font-medium transition ${
+            autoDisabled
+              ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+              : "bg-red-500 hover:bg-red-600 text-white"
+          }`}
         >
           Run Now
         </button>
-      </Card>
+      </div>
     </div>
   );
 }

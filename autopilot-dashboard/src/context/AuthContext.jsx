@@ -19,7 +19,12 @@ export function AuthProvider({ children }) {
 
       try {
         const me = await fetchMe();
-        setUser(me);
+
+        setUser({
+          email: me.user.email,
+          organizations: me.organizations,
+        });
+
       } catch {
         logout();
       } finally {
@@ -36,7 +41,12 @@ export function AuthProvider({ children }) {
 
     try {
       const me = await fetchMe();
-      setUser(me);
+
+      setUser({
+        email: me.user.email,
+        organizations: me.organizations,
+      });
+
     } catch {
       logout();
     }

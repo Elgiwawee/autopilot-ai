@@ -1,17 +1,20 @@
 # ai_engine/resize_rules.py
 
 def resize_safe(resource, utilization):
-    """
-    Conservative rules for production safety.
-    """
+    cpu_avg = utilization.get("cpu_avg")
+    cpu_max = utilization.get("cpu_max")
 
-    if utilization["cpu_avg"] is None:
+    if cpu_avg is None:
         return False, "No CPU data"
 
-    if utilization["cpu_avg"] > 30:
-        return False, "CPU average too high"
+    if cpu_max and cpu_max > 70:
+        return False, "High CPU spikes"
 
-    if utilization["cpu_max"] and utilization["cpu_max"] > 60:
-        return False, "CPU spikes detected"
+    if cpu_avg > 35:
+        return False, "CPU too high"
+
+    # optional safety
+    if hasattr(resource, "uptime_hours") and resource.uptime_hours < 24:
+        return False, "Instance too new"
 
     return True, "Safe to downsize"

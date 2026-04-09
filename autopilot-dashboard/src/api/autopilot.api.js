@@ -3,12 +3,12 @@
 import api from "./client";
 
 export const getAutopilotStatus = async () => {
-  const res = await api.get("/autopilot/status");
+  const res = await api.get("/autopilot/status/");
   return res.data;
 };
 
 export const updateAutopilotMode = async (cloud_account_id, mode) => {
-  const res = await api.post("/autopilot/mode", {
+  const res = await api.post("/autopilot/mode/", {
     cloud_account_id,
     mode
   });
@@ -16,6 +16,6 @@ export const updateAutopilotMode = async (cloud_account_id, mode) => {
 };
 
 export const runAutopilotNow = async () => {
-  const res = await api.post("/autopilot/run");
+  const res = await api.post("/autopilot/run/");
   return res.data;
 };

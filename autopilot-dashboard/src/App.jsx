@@ -24,6 +24,9 @@ import Autopilot from "./pages/Autopilot";
 import Policies from "./pages/Policies";
 import Safety from "./pages/settings/Safety";
 import OverviewPage from "./pages/Overview";
+import Team from "./pages/settings/Team";
+import AcceptInvite from "./pages/AcceptInvite";
+
 
 export default function AppRoutes() {
   return (
@@ -45,7 +48,7 @@ export default function AppRoutes() {
           <Route path="/optimizer" element={<Optimizer />} />
           <Route path="/audit" element={<Audit />} />
           <Route path="/billing" element={<Billing />} />
-
+          <Route path="/invite/:token" element={<AcceptInvite />} />
           <Route path="/settings" element={<SettingsLayout />}>
             <Route index element={<CloudAccountsPage />} />
             <Route path="cloud-accounts" element={<CloudAccountsPage />} />
@@ -53,6 +56,7 @@ export default function AppRoutes() {
             <Route path="policies" element={<Policies />} />
             <Route path="safety" element={<Safety />} />
             <Route path="audit" element={<Audit />} />
+            <Route path="team" element={<Team />} />
             <Route path="billing" element={<Billing />} />
           </Route>
 

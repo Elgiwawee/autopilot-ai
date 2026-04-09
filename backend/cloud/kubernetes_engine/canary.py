@@ -1,3 +1,5 @@
+# cloud/kubernetes_engine/canary.py
+
 def canary_patch(
     k8s,
     deployment,

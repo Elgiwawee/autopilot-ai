@@ -8,6 +8,7 @@ from kubernetes_engine.rollback import rollback_execution
 from kubernetes_engine.client import KubernetesClient
 from actions.models import CanaryWindow, ExecutionRecord
 from kubernetes_engine.models import CanaryWindow
+from kubernetes_engine.tasks.commit import commit_execution
 
 @shared_task(bind=True)
 def evaluate_canary(self, execution_record_id):
@@ -66,3 +67,5 @@ def evaluate_canary(self, execution_record_id):
     # 🟢 PASS → VERIFIED
     execution.state = "VERIFIED"
     execution.save(update_fields=["state"])
+
+    commit_execution.apply_async(args=[execution.id], countdown=60)  # commit after 1 min to allow metrics to stabilize

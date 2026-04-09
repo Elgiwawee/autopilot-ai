@@ -8,7 +8,7 @@ def is_zombie(volume):
 
 def generate_delete_plan(volume):
     return ActionPlan.objects.create(
-        resource_type="ebs",
+        resource=volume.cloud_resource,
         resource_id=volume.id,
         action_type="delete_volume",
         estimated_savings=volume.size_gb * 0.1 * 24 * 30,

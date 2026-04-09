@@ -6,7 +6,7 @@ export default function AutopilotModeLock({ disabled, reason }) {
   if (!disabled) return null;
 
   return (
-    <div className="flex items-center gap-2 text-xs text-red-400 mt-2">
+    <div className="flex items-center gap-2 text-xs text-danger mt-2">
       <Lock size={14} />
       {reason}
     </div>

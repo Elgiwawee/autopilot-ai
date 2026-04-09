@@ -1,7 +1,7 @@
 // src/pages/Register.jsx
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // ✅ add Link
 import { register } from "../api/auth.api";
 
 export default function Register() {
@@ -34,23 +34,30 @@ export default function Register() {
 
       navigate("/login");
     } catch (err) {
-      console.error("REGISTER ERROR:", err.response?.data || err);
-      setError(JSON.stringify(err.response?.data || "Registration failed"));
+      setError("Registration failed");
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex flex-col items-center justify-center">
+
+      {/* ✅ LOGO */}
+      <img
+        src="/logo.png"
+        alt="Autopilot"
+        className="h-16 mb-6"
+      />
+
       <form
         onSubmit={handleSubmit}
         className="bg-panel border border-border p-8 rounded-lg w-96"
       >
-        <h1 className="text-2xl font-semibold mb-6">
+        <h1 className="text-2xl font-semibold mb-6 text-center">
           Create Organization
         </h1>
 
         {error && (
-          <div className="mb-4 text-danger text-sm">
+          <div className="mb-4 text-danger text-sm text-center">
             {error}
           </div>
         )}
@@ -96,6 +103,15 @@ export default function Register() {
         <button className="w-full bg-primary py-2 rounded-lg font-medium">
           Register
         </button>
+
+        {/* ✅ SWITCH TO LOGIN */}
+        <div className="mt-4 text-sm text-center text-muted">
+          Already have an account?{" "}
+          <Link to="/login" className="text-primary hover:underline">
+            Login
+          </Link>
+        </div>
+
       </form>
     </div>
   );

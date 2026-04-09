@@ -5,12 +5,12 @@ from cloud.models import CloudResource
 
 
 def detect_idle_ec2_instances():
-    idle_resources = []
-
     resources = CloudResource.objects.filter(
         resource_type="vm",
         state="running",
     )
+
+    idle_resources = []
 
     for resource in resources:
         avg_cpu = resource.metrics.filter(

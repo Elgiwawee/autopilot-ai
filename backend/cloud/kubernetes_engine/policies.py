@@ -1,5 +1,7 @@
-from django.apps import apps
+#
 
+from django.apps import apps
+from audit.services.writer import write_audit_log
 
 class PolicyViolation(Exception):
     pass
@@ -72,6 +74,14 @@ def enforce_policies(plan):
         )
 
         if not allowed:
+            write_audit_log(
+                organization=plan.cloud_account.organization,
+                actor="POLICY_ENGINE",
+                action=plan.action_type,
+                resource_id=plan.resource_id,
+                status="DENIED",
+                metadata={"policy_id": policy.id},
+            )
             raise PolicyViolation(
                 f"Execution blocked by policy: {policy.name or policy.id}"
             )

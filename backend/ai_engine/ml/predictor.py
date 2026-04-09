@@ -1,3 +1,5 @@
+# ai_engine/ml/predictor.py
+
 from ai_engine.ml.risk_model import load_risk_model, load_online_model
 
 
@@ -13,8 +15,7 @@ FEATURE_ORDER = [
 
 def predict_execution(feature_dict):
 
-    features = [feature_dict[f] for f in FEATURE_ORDER]
-
+    features = [feature_dict.get(f, 0) for f in FEATURE_ORDER]
     # 1️⃣ Try online model first
     online_model = load_online_model()
 

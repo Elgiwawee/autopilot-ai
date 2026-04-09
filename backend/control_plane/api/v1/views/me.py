@@ -20,6 +20,7 @@ class MeView(APIView):
                     "id": m.organization.id,
                     "name": m.organization.name,
                     "role": m.role,
+                    "region": m.organization.region or "us-east-1",
                 }
                 for m in memberships
             ]

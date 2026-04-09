@@ -2,13 +2,15 @@
 
 import logging
 from django.db import transaction
-
+from actions.models import ActionExecution
 from accounts.models import GlobalSafety
 from actions.models import ExecutionPlan
 from audit.services.writer import write_audit_log
 from cloud.executors.factory import get_cloud_executor
+from billing.services.trigger import trigger_savings_computation
 from control_plane.services.safety import assert_autopilot_allowed
 from ai_engine.reinforcement.policy import OptimizationPolicy
+from ai_engine.reinforcement.trainer import RLTrainer
 from control_plane.services.billing_guard import (
     assert_billing_in_good_standing
 )
@@ -26,11 +28,16 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
     safety = GlobalSafety.objects.first()
     if not safety or not safety.autopilot_enabled:
         write_audit_log(
-            organization=plan.cloud_account.organization,
-            actor=actor,
-            action="EXECUTION_BLOCKED_GLOBAL_SAFETY",
-            resource_id=str(plan.id),
-            status="BLOCKED",
+            organization=plan.organization,
+            actor="AUTOPILOT",
+            action=plan.action_type,
+            resource_id=str(plan.resource.id),
+            status=execution.status, #status="BLOCKED"
+            metadata={
+                "cloud": plan.resource.cloud_account.provider.slug,
+                "risk_score": execution.decision.risk_score,
+                "savings": plan.estimated_savings,
+            }
         )
         raise RuntimeError("Execution blocked by Global Safety switch")
 
@@ -49,6 +56,7 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
     policy = OptimizationPolicy()
 
     should_execute = policy.should_execute(
+        action=plan.action,
         risk_score=plan.risk_score,
         estimated_savings=plan.estimated_monthly_savings,
     )
@@ -77,9 +85,9 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
     # 6️⃣ EXECUTION
     try:
         executor.execute(
-            target_type=plan.target_type,
-            namespace=plan.namespace,
-            target_name=plan.target_name,
+            target_type=plan.resource.resource_type,
+            namespace=getattr(plan.resource, "namespace", None),
+            target_name=plan.resource.external_id,
             action=plan.action,
             parameters=plan.parameters,
         )
@@ -125,4 +133,19 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
         plan.cloud_account.organization
     )
 
-    return plan
+    execution = ActionExecution.objects.create(
+        action_plan=plan,
+        status="success",
+    )
+
+    trigger_savings_computation(execution) 
+
+    # =============================
+    # 🔥 RL TRAINING HOOK
+    # =============================
+    try:
+        RLTrainer().update(plan.action_type)
+    except Exception:
+        pass
+
+    return plan, execution

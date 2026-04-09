@@ -8,7 +8,7 @@ export default function RiskGate({ currentRisk, maxRisk }) {
   return (
     <div
       className={`flex items-center gap-2 text-sm ${
-        blocked ? "text-red-400" : "text-green-400"
+        blocked ? "text-danger" : "text-success"
       }`}
     >
       {blocked ? <ShieldAlert size={16} /> : <ShieldCheck size={16} />}
