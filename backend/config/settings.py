@@ -57,9 +57,11 @@ INSTALLED_APPS = [
     'billing',
     
     'control_plane',
+     "corsheaders",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -68,7 +70,6 @@ MIDDLEWARE = [
     "control_plane.middleware.organization.OrganizationMiddleware",
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "control_plane.middleware.organization.OrganizationMiddleware",
 
 ]
 
@@ -199,3 +200,15 @@ EMAIL_HOST_USER = "your@email.com"
 EMAIL_HOST_PASSWORD = "yourpassword"
 # Email settings for production
 """
+
+CORS_ALLOWED_ORIGINS = [
+    "http://13.62.55.71:5173",
+]
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_HEADERS = [
+    "authorization",
+    "content-type",
+    "x-organization-id",
+]

@@ -25,7 +25,8 @@ export function AuthProvider({ children }) {
           organizations: me.organizations,
         });
 
-      } catch {
+      } catch (err) {
+        console.log("Bootstrap failed:", err);
         logout();
       } finally {
         setLoading(false);
@@ -35,6 +36,7 @@ export function AuthProvider({ children }) {
     bootstrap();
   }, [token]);
 
+  // ✅ FIXED LOGIN
   async function login(jwt) {
     localStorage.setItem("token", jwt);
     setToken(jwt);
@@ -47,13 +49,17 @@ export function AuthProvider({ children }) {
         organizations: me.organizations,
       });
 
-    } catch {
+      return true; // ✅ VERY IMPORTANT
+    } catch (err) {
+      console.log("Login fetchMe failed:", err);
       logout();
+      return false;
     }
   }
 
   function logout() {
     localStorage.removeItem("token");
+    localStorage.removeItem("refresh");
     setToken(null);
     setUser(null);
   }
@@ -66,7 +72,7 @@ export function AuthProvider({ children }) {
         login,
         logout,
         loading,
-        isAuthenticated: !!token,
+        isAuthenticated: !!token && !!user
       }}
     >
       {children}

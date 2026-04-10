@@ -1,7 +1,7 @@
 // src/pages/Login.jsx
 
 import { useState } from "react";
-import { useNavigate, useLocation ,Link } from "react-router-dom"; // ✅ add Link
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { login as loginApi } from "../api/auth.api";
 import { useAuth } from "../context/AuthContext";
 
@@ -24,8 +24,20 @@ export default function Login() {
 
     try {
       const res = await loginApi(form);
-      await login(res.data.access);
-      navigate(next || "/overview");
+
+            // ✅ store BOTH tokens
+      localStorage.setItem("token", res.data.access);
+      localStorage.setItem("refresh", res.data.refresh);
+
+
+      const success = await login(res.data.access);
+
+      if (success) {
+        navigate(next || "/overview");
+      } else {
+        setError("Login failed. Try again.");
+      }
+
     } catch (err) {
       setError("Invalid credentials");
     }
@@ -34,7 +46,6 @@ export default function Login() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center">
 
-      {/* ✅ LOGO */}
       <img
         src="/logo.png"
         alt="Autopilot"
@@ -78,7 +89,6 @@ export default function Login() {
           Login
         </button>
 
-        {/* ✅ SWITCH TO REGISTER */}
         <div className="mt-4 text-sm text-center text-muted">
           Don’t have an account?{" "}
           <Link to="/register" className="text-primary hover:underline">

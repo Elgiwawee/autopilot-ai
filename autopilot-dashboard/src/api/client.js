@@ -3,7 +3,12 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "/api/v1",
+  baseURL: "http://13.62.55.71:8000/api/v1",
+  headers: {
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+  },
+
 });
 
 
@@ -46,7 +51,7 @@ api.interceptors.response.use(
         const refresh = localStorage.getItem("refresh");
 
         const res = await axios.post(
-          "http://127.0.0.1:8000/api/token/refresh/",
+          "http://13.62.55.71:8000/api/token/refresh/",
           { refresh }
         );
 
