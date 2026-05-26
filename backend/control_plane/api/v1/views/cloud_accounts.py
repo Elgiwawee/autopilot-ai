@@ -109,7 +109,7 @@ class CloudAccountListCreateView(APIView):
         )
 
         # ✅ BACKGROUND DISCOVERY
-        discover_cloud_account.delay(cloud_account.id)
+        # discover_cloud_account.delay(cloud_account.id)
 
         return Response(
             {
