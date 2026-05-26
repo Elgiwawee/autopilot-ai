@@ -2,45 +2,52 @@
 
 import axios from "axios";
 
+// Production API URL
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://api.autopilotops.cloud/api/v1";
+
 const api = axios.create({
-  baseURL: "http://13.62.55.71:8000/api/v1",
+  baseURL: API_BASE_URL,
   headers: {
-    "Cache-Control": "no-cache",
-    "Pragma": "no-cache",
+    "Content-Type": "application/json",
   },
-
 });
-
 
 // Attach token + organization
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(
+  (config) => {
 
-  const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
-  const org = JSON.parse(localStorage.getItem("active_org"));
+    const org = JSON.parse(
+      localStorage.getItem("active_org")
+    );
 
-  if (org?.id) {
-    config.headers["X-Organization-ID"] = org.id;
-  }
+    if (org?.id) {
+      config.headers["X-Organization-ID"] = org.id;
+    }
 
-  return config;
-});
-
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 // Auto refresh token
 api.interceptors.response.use(
   (response) => response,
+
   async (error) => {
 
     const originalRequest = error.config;
 
+    // Prevent infinite retry loop
     if (
-      error.response &&
-      error.response.status === 401 &&
+      error.response?.status === 401 &&
       !originalRequest._retry
     ) {
 
@@ -48,27 +55,45 @@ api.interceptors.response.use(
 
       try {
 
-        const refresh = localStorage.getItem("refresh");
+        const refresh =
+          localStorage.getItem("refresh");
+
+        if (!refresh) {
+          throw new Error("No refresh token");
+        }
 
         const res = await axios.post(
-          "http://13.62.55.71:8000/api/token/refresh/",
-          { refresh }
+          "https://api.autopilotops.cloud/api/token/refresh/",
+          {
+            refresh,
+          }
         );
 
         const newAccess = res.data.access;
 
-        localStorage.setItem("token", newAccess);
+        // Save new token
+        localStorage.setItem(
+          "token",
+          newAccess
+        );
 
-        // update header
-        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+        // Retry original request
+        originalRequest.headers.Authorization =
+          `Bearer ${newAccess}`;
 
         return api(originalRequest);
 
       } catch (refreshError) {
 
-        // refresh failed → logout
+        console.error(
+          "Token refresh failed:",
+          refreshError
+        );
+
+        // Logout user
         localStorage.removeItem("token");
         localStorage.removeItem("refresh");
+        localStorage.removeItem("active_org");
 
         window.location.href = "/login";
 

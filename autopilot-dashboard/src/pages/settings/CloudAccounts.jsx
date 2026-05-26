@@ -46,7 +46,10 @@ export default function CloudAccountsPage() {
     setSubmitting(true);
 
     try {
-      const payload = { ...form };
+      const payload = {
+        ...form,
+        provider_code: form.provider_code.toUpperCase(),
+      };
 
       // ✅ Parse JSON safely for GCP
       if (form.provider_code === "gcp" && form.service_account_json) {
@@ -96,9 +99,13 @@ export default function CloudAccountsPage() {
   // 🎯 PROVIDER ICONS
   // ---------------------------------------
   const providerIcon = code => {
-    if (code === "aws") return "🟠";
-    if (code === "azure") return "🔵";
-    if (code === "gcp") return "🟢";
+
+    const value = code?.toLowerCase();
+
+    if (value === "aws") return "🟠";
+    if (value === "azure") return "🔵";
+    if (value === "gcp") return "🟢";
+
     return "☁️";
   };
 

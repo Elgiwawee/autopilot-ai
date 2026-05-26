@@ -41,7 +41,7 @@ class CloudAccountListCreateView(APIView):
     def post(self, request):
         org = request.organization
 
-        provider_code = request.data.get("provider_code")
+        provider_code = request.data.get("provider_code", "").upper()
         account_identifier = request.data.get("account_identifier")
         role_arn = request.data.get("role_arn")
         mode = request.data.get("mode", "observe")
