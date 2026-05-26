@@ -71,7 +71,7 @@ class CloudAccountListCreateView(APIView):
         )
 
         # ✅ CREATE PROVIDER-SPECIFIC CONFIG
-        if provider_code == "AWS":
+        if provider_code == "aws":
 
             AWSAccount.objects.create(
                 cloud_account=cloud_account,
@@ -82,7 +82,7 @@ class CloudAccountListCreateView(APIView):
                 external_id=request.data.get("external_id"),
             )
 
-        elif provider_code == "AZURE":
+        elif provider_code == "azure":
 
             AzureAccount.objects.create(
                 cloud_account=cloud_account,
@@ -94,7 +94,7 @@ class CloudAccountListCreateView(APIView):
                 subscription_id=request.data.get("subscription_id"),
             )
 
-        elif provider_code == "GCP":
+        elif provider_code == "gcp":
 
             GCPAccount.objects.create(
                 cloud_account=cloud_account,

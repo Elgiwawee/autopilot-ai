@@ -48,7 +48,6 @@ export default function CloudAccountsPage() {
     try {
       const payload = {
         ...form,
-        provider_code: form.provider_code.toUpperCase(),
       };
 
       // ✅ Parse JSON safely for GCP

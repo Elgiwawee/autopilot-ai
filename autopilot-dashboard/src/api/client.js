@@ -63,7 +63,7 @@ api.interceptors.response.use(
         }
 
         const res = await axios.post(
-          "https://api.autopilotops.cloud/api/token/refresh/",
+          "https://api.autopilotops.cloud/api/v1/token/refresh/",
           {
             refresh,
           }
