@@ -17,6 +17,7 @@ export default function CloudAccountsPage() {
     provider_code: "aws",
     account_identifier: "",
     role_arn: "",
+    external_id: "",
     tenant_id: "",
     client_id: "",
     client_secret: "",
@@ -65,6 +66,7 @@ export default function CloudAccountsPage() {
         provider_code: "aws",
         account_identifier: "",
         role_arn: "",
+        external_id: "",
         tenant_id: "",
         client_id: "",
         client_secret: "",
@@ -115,16 +117,34 @@ export default function CloudAccountsPage() {
     switch (form.provider_code) {
       case "aws":
         return (
-          <div>
-            <label className="text-sm">Role ARN</label>
-            <input
-              className="input"
-              placeholder="arn:aws:iam::123456789:role/..."
-              value={form.role_arn}
-              onChange={e =>
-                setForm({ ...form, role_arn: e.target.value })
-              }
-            />
+          <div className="space-y-2">
+
+            <div>
+              <label className="text-sm">Role ARN</label>
+
+              <input
+                className="input"
+                placeholder="arn:aws:iam::123456789:role/..."
+                value={form.role_arn}
+                onChange={e =>
+                  setForm({ ...form, role_arn: e.target.value })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="text-sm">External ID</label>
+
+              <input
+                className="input"
+                placeholder="external-id"
+                value={form.external_id}
+                onChange={e =>
+                  setForm({ ...form, external_id: e.target.value })
+                }
+              />
+            </div>
+
           </div>
         );
 
