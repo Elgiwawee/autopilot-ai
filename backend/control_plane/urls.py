@@ -82,7 +82,7 @@ urlpatterns += [
 ]
 
 urlpatterns += [
-    path("api/token/refresh/", TokenRefreshView.as_view()),
+    path("token/refresh/", TokenRefreshView.as_view()),
 ]
 
 urlpatterns += [
