@@ -1,4 +1,4 @@
-// src/components/sefety/RiskGate.jsx
+// src/components/safety/RiskGate.jsx
 
 import { ShieldAlert, ShieldCheck } from "lucide-react";
 

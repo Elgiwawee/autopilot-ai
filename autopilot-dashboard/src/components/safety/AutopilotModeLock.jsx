@@ -1,4 +1,4 @@
-// src/sefety/AutopilotModeLock.jsx
+// src/safety/AutopilotModeLock.jsx
 
 import { Lock } from "lucide-react";
 

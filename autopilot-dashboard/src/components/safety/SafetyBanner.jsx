@@ -1,4 +1,4 @@
-// src/components/sefety/SefetyBanner.jsx
+// src/components/safety/SafetyBanner.jsx
 
 import { AlertTriangle, Lock } from "lucide-react";
 

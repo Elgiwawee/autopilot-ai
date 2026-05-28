@@ -1,57 +1,91 @@
-# control_plane/aip/v1/views/cloud_accounts.py
+from django.db import transaction
+from django.shortcuts import get_object_or_404
 
-from accounts.models import AutopilotSettings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from django.shortcuts import get_object_or_404
-from accounts.models import AWSAccount, AzureAccount, GCPAccount
-from cloud.models import CloudAccount, CloudProvider
+
+from accounts.models import (
+    AWSAccount,
+    AzureAccount,
+    GCPAccount,
+    AutopilotSettings,
+)
+
+from cloud.models import (
+    CloudAccount,
+    CloudProvider,
+)
+
 from control_plane.permissions.member import IsOrganizationMember
 from control_plane.tasks import discover_cloud_account
+
 
 class CloudAccountListCreateView(APIView):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get(self, request):
+
         org = request.organization
 
         accounts = (
             CloudAccount.objects
-            .filter(organization=org, is_active=True)
+            .filter(
+                organization=org,
+                is_active=True
+            )
             .select_related("provider")
+            .order_by("-created_at")
         )
 
-        results = [
-            {
+        results = []
+
+        for acc in accounts:
+
+            results.append({
                 "id": str(acc.id),
                 "provider": acc.provider.display_name,
                 "provider_code": acc.provider.code,
                 "account_identifier": acc.account_identifier,
                 "mode": acc.mode,
-                "status": "active" if acc.is_active else "disabled",
+                "status": acc.status,
+                "is_active": acc.is_active,
+                "error_message": acc.error_message,
                 "created_at": acc.created_at,
-            }
-            for acc in accounts
-        ]
+            })
 
-        return Response({"results": results})
+        return Response({
+            "results": results
+        })
 
+    @transaction.atomic
     def post(self, request):
+
         org = request.organization
 
         provider_code = request.data.get(
             "provider_code",
             ""
         ).strip().lower()
-        account_identifier = request.data.get("account_identifier")
+
+        account_identifier = request.data.get(
+            "account_identifier"
+        )
+
         role_arn = request.data.get("role_arn")
-        mode = request.data.get("mode", "observe")
+
+        mode = request.data.get(
+            "mode",
+            "observe"
+        )
 
         if not provider_code or not account_identifier:
+
             return Response(
-                {"detail": "Missing required fields"},
+                {
+                    "detail": "Missing required fields"
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -67,52 +101,65 @@ class CloudAccountListCreateView(APIView):
             account_identifier=account_identifier,
             role_arn=role_arn,
             mode=mode,
+            status=CloudAccount.STATUS_PENDING,
             is_active=True,
         )
 
-        # ✅ CREATE PROVIDER-SPECIFIC CONFIG
-        if provider_code == "aws":
+        try:
 
-            AWSAccount.objects.create(
+            # AWS
+            if provider_code == "aws":
+
+                AWSAccount.objects.create(
+                    cloud_account=cloud_account,
+                    organization=org,
+                    name="AWS Account",
+                    account_id=account_identifier,
+                    role_arn=role_arn,
+                    external_id=request.data.get("external_id"),
+                )
+
+            # AZURE
+            elif provider_code == "azure":
+
+                AzureAccount.objects.create(
+                    cloud_account=cloud_account,
+                    organization=org,
+                    name="Azure Account",
+                    tenant_id=request.data.get("tenant_id"),
+                    client_id=request.data.get("client_id"),
+                    client_secret=request.data.get("client_secret"),
+                    subscription_id=request.data.get("subscription_id"),
+                )
+
+            # GCP
+            elif provider_code == "gcp":
+
+                GCPAccount.objects.create(
+                    cloud_account=cloud_account,
+                    organization=org,
+                    name="GCP Account",
+                    project_id=request.data.get("project_id"),
+                    service_account_json=request.data.get(
+                        "service_account_json"
+                    ),
+                )
+
+            # DEFAULT AUTOPILOT SETTINGS
+            AutopilotSettings.objects.create(
                 cloud_account=cloud_account,
-                organization=org,
-                name="AWS Account",
-                account_id=account_identifier,
-                role_arn=request.data.get("role_arn"),
-                external_id=request.data.get("external_id"),
+                mode="AUTO_SAFE",
+                max_risk_allowed=0.25
             )
 
-        elif provider_code == "azure":
-
-            AzureAccount.objects.create(
-                cloud_account=cloud_account,
-                organization=org,
-                name="Azure Account",
-                tenant_id=request.data.get("tenant_id"),
-                client_id=request.data.get("client_id"),
-                client_secret=request.data.get("client_secret"),
-                subscription_id=request.data.get("subscription_id"),
+            # RUN DISCOVERY TASK
+            discover_cloud_account.delay(
+                str(cloud_account.id)
             )
 
-        elif provider_code == "gcp":
+        except Exception as e:
 
-            GCPAccount.objects.create(
-                cloud_account=cloud_account,
-                organization=org,
-                name="GCP Account",
-                project_id=request.data.get("project_id"),
-                service_account_json=request.data.get("service_account_json"),
-            )
-
-        # ✅ AUTOPILOT DEFAULT
-        AutopilotSettings.objects.create(
-            cloud_account=cloud_account,
-            mode="AUTO_SAFE",
-            max_risk_allowed=0.25
-        )
-
-        # ✅ BACKGROUND DISCOVERY
-        # discover_cloud_account.delay(cloud_account.id)
+            raise e
 
         return Response(
             {
@@ -121,16 +168,22 @@ class CloudAccountListCreateView(APIView):
                 "provider_code": cloud_account.provider.code,
                 "account_identifier": cloud_account.account_identifier,
                 "mode": cloud_account.mode,
-                "status": "active",
+                "status": cloud_account.status,
                 "created_at": cloud_account.created_at,
             },
             status=status.HTTP_201_CREATED
         )
-    
+
+
 class CloudAccountDetailView(APIView):
-    permission_classes = [IsAuthenticated, IsOrganizationMember]
+
+    permission_classes = [
+        IsAuthenticated,
+        IsOrganizationMember
+    ]
 
     def delete(self, request, account_id):
+
         org = request.organization
 
         cloud_account = get_object_or_404(
@@ -139,11 +192,19 @@ class CloudAccountDetailView(APIView):
             organization=org,
         )
 
-            # Soft delete
         cloud_account.is_active = False
-        cloud_account.save(update_fields=["is_active"])
+        cloud_account.status = CloudAccount.STATUS_DISABLED
+
+        cloud_account.save(
+            update_fields=[
+                "is_active",
+                "status"
+            ]
+        )
 
         return Response(
-            {"detail": "Cloud account disabled"},
+            {
+                "detail": "Cloud account disabled"
+            },
             status=status.HTTP_200_OK
         )

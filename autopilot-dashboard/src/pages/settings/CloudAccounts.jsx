@@ -1,15 +1,28 @@
-// src/pages/settings/CloudAccounts.jsx
+import { useEffect, useMemo, useState } from "react";
 
-import { useEffect, useState } from "react";
 import {
   fetchCloudAccounts,
   createCloudAccount,
   disableCloudAccount,
 } from "../../api/cloudAccounts";
 
+import {
+  Cloud,
+  Shield,
+  ShieldAlert,
+  Bot,
+  Plus,
+  Trash2,
+  Loader2,
+  CheckCircle2,
+  AlertTriangle,
+  PauseCircle,
+} from "lucide-react";
+
 export default function CloudAccountsPage() {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -33,8 +46,8 @@ export default function CloudAccountsPage() {
 
   async function loadAccounts() {
     try {
-      const res = await fetchCloudAccounts();
-      setAccounts(res || []);
+      const data = await fetchCloudAccounts();
+      setAccounts(data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -44,6 +57,7 @@ export default function CloudAccountsPage() {
 
   async function handleCreate(e) {
     e.preventDefault();
+
     setSubmitting(true);
 
     try {
@@ -51,17 +65,21 @@ export default function CloudAccountsPage() {
         ...form,
       };
 
-      // ✅ Parse JSON safely for GCP
-      if (form.provider_code === "gcp" && form.service_account_json) {
-        payload.service_account_json = JSON.parse(form.service_account_json);
+      if (
+        form.provider_code === "gcp" &&
+        form.service_account_json
+      ) {
+        payload.service_account_json = JSON.parse(
+          form.service_account_json
+        );
       }
 
-      const newAccount = await createCloudAccount(payload);
+      const created = await createCloudAccount(payload);
 
-      setAccounts(prev => [...prev, newAccount]);
+      setAccounts(prev => [created, ...prev]);
+
       setShowModal(false);
 
-      // reset
       setForm({
         provider_code: "aws",
         account_identifier: "",
@@ -76,107 +94,209 @@ export default function CloudAccountsPage() {
         mode: "observe",
       });
 
-      alert("✅ Cloud account connected successfully");
     } catch (err) {
       console.error(err);
-      alert("❌ Failed to connect account");
+
+      alert(
+        err?.response?.data?.detail ||
+          "Failed to connect cloud account"
+      );
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleDisable(id) {
-    if (!window.confirm("Disable this cloud account?")) return;
+    const confirmed = window.confirm(
+      "Disable this cloud account?"
+    );
+
+    if (!confirmed) return;
 
     try {
       await disableCloudAccount(id);
-      setAccounts(prev => prev.filter(acc => acc.id !== id));
+
+      setAccounts(prev =>
+        prev.filter(acc => acc.id !== id)
+      );
     } catch (err) {
       console.error(err);
     }
   }
 
-  // ---------------------------------------
-  // 🎯 PROVIDER ICONS
-  // ---------------------------------------
-  const providerIcon = code => {
+  const stats = useMemo(() => {
+    return {
+      total: accounts.length,
+      autopilot: accounts.filter(
+        a => a.mode === "autopilot"
+      ).length,
+      recommend: accounts.filter(
+        a => a.mode === "recommend"
+      ).length,
+      observe: accounts.filter(
+        a => a.mode === "observe"
+      ).length,
+    };
+  }, [accounts]);
 
-    const value = code?.toLowerCase();
+  function providerIcon(code) {
+    switch (code?.toLowerCase()) {
+      case "aws":
+        return "🟠";
 
-    if (value === "aws") return "🟠";
-    if (value === "azure") return "🔵";
-    if (value === "gcp") return "🟢";
+      case "azure":
+        return "🔵";
 
-    return "☁️";
-  };
+      case "gcp":
+        return "🟢";
 
-  // ---------------------------------------
-  // 🎯 PROVIDER DYNAMIC FIELDS
-  // ---------------------------------------
+      default:
+        return "☁️";
+    }
+  }
+
+  function statusBadge(status) {
+    switch (status) {
+      case "connected":
+      case "active":
+        return (
+          <span className="flex items-center gap-1 text-emerald-400 text-xs">
+            <CheckCircle2 size={14} />
+            Connected
+          </span>
+        );
+
+      case "pending":
+        return (
+          <span className="flex items-center gap-1 text-yellow-400 text-xs">
+            <Loader2 size={14} className="animate-spin" />
+            Pending
+          </span>
+        );
+
+      case "failed":
+        return (
+          <span className="flex items-center gap-1 text-red-400 text-xs">
+            <AlertTriangle size={14} />
+            Failed
+          </span>
+        );
+
+      default:
+        return (
+          <span className="flex items-center gap-1 text-gray-400 text-xs">
+            <PauseCircle size={14} />
+            Disabled
+          </span>
+        );
+    }
+  }
+
+  function modeBadge(mode) {
+    switch (mode) {
+      case "autopilot":
+        return (
+          <div className="flex items-center gap-1 bg-primary/20 text-primary px-2 py-1 rounded-full text-xs">
+            <Bot size={14} />
+            Autopilot
+          </div>
+        );
+
+      case "recommend":
+        return (
+          <div className="flex items-center gap-1 bg-yellow-500/10 text-yellow-400 px-2 py-1 rounded-full text-xs">
+            <ShieldAlert size={14} />
+            Recommend
+          </div>
+        );
+
+      default:
+        return (
+          <div className="flex items-center gap-1 bg-muted/20 text-muted px-2 py-1 rounded-full text-xs">
+            <Shield size={14} />
+            Observe
+          </div>
+        );
+    }
+  }
+
   function ProviderFields() {
     switch (form.provider_code) {
       case "aws":
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
 
-            <div>
-              <label className="text-sm">Role ARN</label>
+            <input
+              className="input"
+              placeholder="Role ARN"
+              value={form.role_arn}
+              onChange={e =>
+                setForm({
+                  ...form,
+                  role_arn: e.target.value,
+                })
+              }
+            />
 
-              <input
-                className="input"
-                placeholder="arn:aws:iam::123456789:role/..."
-                value={form.role_arn}
-                onChange={e =>
-                  setForm({ ...form, role_arn: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <label className="text-sm">External ID</label>
-
-              <input
-                className="input"
-                placeholder="external-id"
-                value={form.external_id}
-                onChange={e =>
-                  setForm({ ...form, external_id: e.target.value })
-                }
-              />
-            </div>
-
+            <input
+              className="input"
+              placeholder="External ID"
+              value={form.external_id}
+              onChange={e =>
+                setForm({
+                  ...form,
+                  external_id: e.target.value,
+                })
+              }
+            />
           </div>
         );
 
       case "azure":
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
+
             <input
               className="input"
               placeholder="Tenant ID"
               onChange={e =>
-                setForm({ ...form, tenant_id: e.target.value })
+                setForm({
+                  ...form,
+                  tenant_id: e.target.value,
+                })
               }
             />
+
             <input
               className="input"
               placeholder="Client ID"
               onChange={e =>
-                setForm({ ...form, client_id: e.target.value })
+                setForm({
+                  ...form,
+                  client_id: e.target.value,
+                })
               }
             />
+
             <input
               className="input"
               placeholder="Client Secret"
               onChange={e =>
-                setForm({ ...form, client_secret: e.target.value })
+                setForm({
+                  ...form,
+                  client_secret: e.target.value,
+                })
               }
             />
+
             <input
               className="input"
               placeholder="Subscription ID"
               onChange={e =>
-                setForm({ ...form, subscription_id: e.target.value })
+                setForm({
+                  ...form,
+                  subscription_id: e.target.value,
+                })
               }
             />
           </div>
@@ -184,17 +304,21 @@ export default function CloudAccountsPage() {
 
       case "gcp":
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
+
             <input
               className="input"
               placeholder="Project ID"
               onChange={e =>
-                setForm({ ...form, project_id: e.target.value })
+                setForm({
+                  ...form,
+                  project_id: e.target.value,
+                })
               }
             />
 
             <textarea
-              className="input h-28"
+              className="input min-h-[140px]"
               placeholder="Paste Service Account JSON"
               value={form.service_account_json}
               onChange={e =>
@@ -213,165 +337,282 @@ export default function CloudAccountsPage() {
   }
 
   return (
-    <>
+    <div className="space-y-8">
+
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="text-sm text-muted">
-          Manage connected cloud environments
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+
+        <div>
+          <h1 className="text-2xl font-semibold">
+            Cloud Accounts
+          </h1>
+
+          <p className="text-sm text-muted mt-1">
+            Connect and manage multi-cloud infrastructure
+          </p>
         </div>
 
-        <button onClick={() => setShowModal(true)} className="btn-primary">
-          + Connect Cloud Account
+        <button
+          onClick={() => setShowModal(true)}
+          className="btn-primary flex items-center gap-2"
+        >
+          <Plus size={16} />
+          Connect Account
         </button>
       </div>
 
-      {/* LOADING */}
-      {loading ? (
-        <div className="text-muted">Loading...</div>
-      ) : accounts.length === 0 ? (
-        <div className="text-center py-20">
-          <div className="text-5xl mb-4">☁️</div>
-          <h2 className="text-lg font-semibold mb-2">
+      {/* STATS */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+        <div className="bg-panel border border-border rounded-xl p-5">
+          <div className="text-sm text-muted mb-1">
+            Total Accounts
+          </div>
+
+          <div className="text-2xl font-semibold">
+            {stats.total}
+          </div>
+        </div>
+
+        <div className="bg-panel border border-border rounded-xl p-5">
+          <div className="text-sm text-muted mb-1">
+            Autopilot
+          </div>
+
+          <div className="text-2xl font-semibold text-primary">
+            {stats.autopilot}
+          </div>
+        </div>
+
+        <div className="bg-panel border border-border rounded-xl p-5">
+          <div className="text-sm text-muted mb-1">
+            Recommend
+          </div>
+
+          <div className="text-2xl font-semibold text-yellow-400">
+            {stats.recommend}
+          </div>
+        </div>
+
+        <div className="bg-panel border border-border rounded-xl p-5">
+          <div className="text-sm text-muted mb-1">
+            Observe
+          </div>
+
+          <div className="text-2xl font-semibold">
+            {stats.observe}
+          </div>
+        </div>
+
+      </div>
+
+      {/* EMPTY */}
+      {!loading && accounts.length === 0 && (
+        <div className="bg-panel border border-border rounded-2xl py-24 text-center">
+
+          <Cloud
+            size={52}
+            className="mx-auto mb-5 text-muted"
+          />
+
+          <h2 className="text-xl font-semibold mb-2">
             No Cloud Accounts Connected
           </h2>
-          <p className="text-muted mb-4">
-            Connect your first account to start optimization
+
+          <p className="text-muted mb-6">
+            Connect your first cloud environment
           </p>
+
           <button
             onClick={() => setShowModal(true)}
             className="btn-primary"
           >
-            + Connect Cloud Account
+            Connect Cloud Account
           </button>
         </div>
-      ) : (
-        <table className="w-full border-collapse">
-          <thead className="text-muted text-sm border-b">
-            <tr>
-              <th className="text-left py-3">Provider</th>
-              <th className="text-left py-3">Account ID</th>
-              <th className="text-left py-3">Mode</th>
-              <th className="text-left py-3">Status</th>
-              <th className="text-left py-3">Connected</th>
-              <th className="text-right py-3">Actions</th>
-            </tr>
-          </thead>
+      )}
 
-          <tbody>
-            {accounts.map(acc => (
-              <tr key={acc.id} className="border-b">
-                <td className="py-3 flex items-center gap-2">
-                  {providerIcon(acc.provider_code)}
-                  <span className="capitalize">{acc.provider}</span>
-                </td>
+      {/* LOADING */}
+      {loading && (
+        <div className="flex justify-center py-20">
+          <Loader2 className="animate-spin" />
+        </div>
+      )}
 
-                <td className="py-3 font-mono text-sm">
-                  {acc.account_identifier}
-                </td>
+      {/* CARDS */}
+      {!loading && accounts.length > 0 && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
-                <td className="py-3 text-xs">
-                  <span className="px-2 py-1 bg-muted/20 rounded">
-                    {acc.mode}
-                  </span>
-                </td>
+          {accounts.map(account => (
+            <div
+              key={account.id}
+              className="bg-panel border border-border rounded-2xl p-6"
+            >
 
-                <td className="py-3 text-success text-sm">
-                  ● {acc.status}
-                </td>
+              <div className="flex items-start justify-between">
 
-                <td className="py-3 text-sm text-muted">
-                  {new Date(acc.created_at).toLocaleDateString()}
-                </td>
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
 
-                <td className="py-3 text-right">
-                  <button
-                    onClick={() => handleDisable(acc.id)}
-                    className="text-danger hover:underline text-sm"
-                  >
-                    Disable
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    <span className="text-xl">
+                      {providerIcon(account.provider_code)}
+                    </span>
+
+                    <h2 className="font-semibold text-lg">
+                      {account.provider}
+                    </h2>
+
+                  </div>
+
+                  <div className="font-mono text-sm text-muted">
+                    {account.account_identifier}
+                  </div>
+                </div>
+
+                {statusBadge(account.status)}
+
+              </div>
+
+              <div className="mt-5 flex items-center gap-3">
+                {modeBadge(account.mode)}
+              </div>
+
+              <div className="mt-6 flex items-center justify-between">
+
+                <div className="text-xs text-muted">
+                  Connected{" "}
+                  {new Date(
+                    account.created_at
+                  ).toLocaleDateString()}
+                </div>
+
+                <button
+                  onClick={() =>
+                    handleDisable(account.id)
+                  }
+                  className="flex items-center gap-1 text-danger hover:opacity-80 text-sm"
+                >
+                  <Trash2 size={14} />
+                  Disable
+                </button>
+
+              </div>
+
+            </div>
+          ))}
+
+        </div>
       )}
 
       {/* MODAL */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-surface p-6 rounded-lg w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">
-              Connect Cloud Account
-            </h3>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
 
-            <form onSubmit={handleCreate} className="space-y-4">
+          <div className="bg-panel border border-border rounded-2xl w-full max-w-lg p-6">
 
-              {/* Provider */}
+            <div className="flex items-center justify-between mb-6">
+
+              <div>
+                <h2 className="text-xl font-semibold">
+                  Connect Cloud Account
+                </h2>
+
+                <p className="text-sm text-muted mt-1">
+                  Add infrastructure securely
+                </p>
+              </div>
+
+            </div>
+
+            <form
+              onSubmit={handleCreate}
+              className="space-y-4"
+            >
+
               <select
                 className="input"
                 value={form.provider_code}
                 onChange={e =>
-                  setForm({ ...form, provider_code: e.target.value })
+                  setForm({
+                    ...form,
+                    provider_code: e.target.value,
+                  })
                 }
               >
                 <option value="aws">AWS</option>
                 <option value="azure">Azure</option>
-                <option value="gcp">GCP</option>
+                <option value="gcp">Google Cloud</option>
               </select>
 
-              {/* Account ID */}
               <input
+                required
                 className="input"
                 placeholder="Account Identifier"
-                required
                 value={form.account_identifier}
                 onChange={e =>
                   setForm({
                     ...form,
-                    account_identifier: e.target.value,
+                    account_identifier:
+                      e.target.value,
                   })
                 }
               />
 
-              {/* Dynamic Fields */}
               <ProviderFields />
 
-              {/* Mode */}
               <select
                 className="input"
                 value={form.mode}
                 onChange={e =>
-                  setForm({ ...form, mode: e.target.value })
+                  setForm({
+                    ...form,
+                    mode: e.target.value,
+                  })
                 }
               >
-                <option value="observe">Observe</option>
-                <option value="recommend">Recommend</option>
-                <option value="autopilot">Autopilot</option>
+                <option value="observe">
+                  Observe
+                </option>
+
+                <option value="recommend">
+                  Recommend
+                </option>
+
+                <option value="autopilot">
+                  Autopilot
+                </option>
               </select>
 
-              {/* Actions */}
               <div className="flex justify-end gap-3 pt-4">
+
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() =>
+                    setShowModal(false)
+                  }
                   className="btn-secondary"
                 >
                   Cancel
                 </button>
 
                 <button
-                  type="submit"
                   disabled={submitting}
+                  type="submit"
                   className="btn-primary"
                 >
-                  {submitting ? "Connecting..." : "Connect"}
+                  {submitting
+                    ? "Connecting..."
+                    : "Connect Account"}
                 </button>
+
               </div>
+
             </form>
+
           </div>
+
         </div>
       )}
-    </>
+    </div>
   );
 }

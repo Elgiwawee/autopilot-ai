@@ -28,30 +28,78 @@ class CloudProvider(models.Model):
 
 
 class CloudAccount(models.Model):
+
     MODE_CHOICES = (
         ("observe", "Observe"),
         ("recommend", "Recommend"),
         ("autopilot", "Autopilot"),
     )
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    STATUS_PENDING = "pending"
+    STATUS_CONNECTED = "connected"
+    STATUS_FAILED = "failed"
+    STATUS_DISABLED = "disabled"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_CONNECTED, "Connected"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_DISABLED, "Disabled"),
+    ]
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
     organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
         related_name="cloud_accounts",
     )
-    provider = models.ForeignKey(CloudProvider, on_delete=models.CASCADE)
-    account_identifier = models.CharField(max_length=128)
-    role_arn = models.CharField(max_length=255, blank=True, null=True)
 
-    mode = models.CharField(max_length=16, choices=MODE_CHOICES, default="observe")
+    provider = models.ForeignKey(
+        CloudProvider,
+        on_delete=models.CASCADE
+    )
+
+    account_identifier = models.CharField(max_length=128)
+
+    role_arn = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
+
+    mode = models.CharField(
+        max_length=16,
+        choices=MODE_CHOICES,
+        default="observe"
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING
+    )
+
     is_active = models.BooleanField(default=True)
+
+    last_checked_at = models.DateTimeField(
+        blank=True,
+        null=True
+    )
+
+    error_message = models.TextField(
+        blank=True,
+        null=True
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.provider.display_name} - {self.account_identifier}"
-
 class CloudResource(models.Model):
     RESOURCE_TYPES = (
         ("vm", "Virtual Machine"),

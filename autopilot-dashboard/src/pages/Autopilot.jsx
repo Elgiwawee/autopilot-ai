@@ -1,3 +1,5 @@
+// src/pages/autopilot.jsx
+
 import { useEffect, useState } from "react";
 import {
   getAutopilotStatus,
@@ -27,7 +29,8 @@ export default function Autopilot() {
 
   if (loading) return <Spinner />;
 
-  const autoDisabled = !status.autopilot_enabled;
+  const autoDisabled =
+    effective_status === "DISABLED";
 
   const changeMode = (accountId, mode) => {
     if (autoDisabled) return;
@@ -88,7 +91,9 @@ export default function Autopilot() {
             {MODES.map(m => (
               <button
                 key={m}
-                disabled={autoDisabled}
+                disabled={
+                  status.effective_status === "DISABLED"
+                }
                 onClick={() =>
                   changeMode(account.cloud_account_id, m)
                 }

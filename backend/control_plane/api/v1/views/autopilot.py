@@ -4,57 +4,31 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from accounts.models import assert_autopilot_enabled
-from django.db.models import Count
 from control_plane.tasks import run_autopilot_for_org
 from control_plane.permissions.member import IsOrganizationMember
 from accounts.models import (
-    GlobalSafety,
-    AutopilotPolicy,
     AutopilotSettings,
 )
 from cloud.models import CloudAccount
 
+from accounts.services.autopilot_service import (
+    AutopilotService
+)
 
 class AutopilotStatusView(APIView):
-    permission_classes = [IsAuthenticated, IsOrganizationMember]
+
+    permission_classes = [
+        IsAuthenticated,
+        IsOrganizationMember,
+    ]
 
     def get(self, request):
-        org = request.organization
 
-        safety, _ = GlobalSafety.objects.get_or_create(
-            organization=org
+        status = AutopilotService.get_status(
+            request.organization
         )
 
-        accounts = CloudAccount.objects.filter(
-            organization=org,
-            is_active=True
-        )
-
-        settings = AutopilotSettings.objects.filter(
-            cloud_account__in=accounts
-        ).select_related("cloud_account")
-
-        active_accounts = settings.exclude(mode="OFF").count()
-
-        effective_status = (
-            "ACTIVE"
-            if safety.autopilot_enabled and active_accounts > 0
-            else "PAUSED"
-        )
-
-        return Response({
-            "autopilot_enabled": safety.autopilot_enabled,
-            "active_accounts": active_accounts,
-            "effective_status": effective_status,   # ✅ ADD THIS
-            "accounts": [
-                {
-                    "cloud_account_id": str(s.cloud_account.id),
-                    "mode": s.mode,
-                    "max_risk_allowed": s.max_risk_allowed,
-                }
-                for s in settings
-            ]
-        })
+        return Response(status)
 
 class AutopilotModeView(APIView):
     permission_classes = [IsAuthenticated, IsOrganizationMember]

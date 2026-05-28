@@ -1,3 +1,5 @@
+// src/api/cloudAccounts.js
+
 import api from "./client";
 
 export const fetchCloudAccounts = async () => {
