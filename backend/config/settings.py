@@ -153,11 +153,73 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+
+# CELERY CORE
 CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_TIMEZONE = 'UTC'
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BEAT_SCHEDULER = (
+"django_celery_beat.schedulers"
+)
+
+
+# TASK ROUTING
+CELERY_TASK_ROUTES = {
+
+# Cloud collection / sync
+"cloud.tasks.*": {
+    "queue": "cloud"
+},
+
+# AI inference / recommendations
+"ai_engine.tasks.*": {
+    "queue": "ai"
+},
+
+# Monitoring / metrics / health
+"monitoring.tasks.*": {
+    "queue": "monitoring"
+},
+
+# Autopilot orchestration
+"control_plane.tasks.*": {
+    "queue": "autopilot"
+},
+
+# Audit trail / compliance
+"audit.tasks.*": {
+    "queue": "audit"
+},
+
+# Billing / invoices / usage
+"billing.tasks.*": {
+    "queue": "billing"
+},
+
+# Infrastructure actions
+"actions.tasks.*": {
+    "queue": "actions"
+},
+
+}
+
+# SAFETY LIMITS
+CELERY_TASK_TIME_LIMIT = 300
+CELERY_TASK_SOFT_TIME_LIMIT = 240
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 50
+CELERY_RESULT_EXPIRES = 3600
+
+
+# OPTIONAL PREFETCH TUNING
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+
+
+
 
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
