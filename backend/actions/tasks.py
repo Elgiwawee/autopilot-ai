@@ -10,8 +10,9 @@ from ai_engine.tasks.detector_tasks import scan_cloud_for_opportunities
 
 from actions.executors.aws_ec2 import stop_ec2_instance
 
-from cloud.tasks import collect_aws_ec2_task
-
+from cloud.tasks.collect_inventory import (
+    collect_all_cloud_resources
+)
 
 @shared_task
 def run_optimizer_scan():
@@ -20,7 +21,7 @@ def run_optimizer_scan():
     for acc in accounts:
 
         if acc.provider.code == "aws":
-            collect_aws_ec2_task.delay(acc.id)  # 🚀 async
+            collect_all_cloud_resources.delay(acc.id)  # 🚀 async
 
         scan_cloud_for_opportunities.delay(acc.id)
 
