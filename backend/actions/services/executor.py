@@ -8,7 +8,7 @@ from actions.models import ExecutionPlan
 from audit.services.writer import write_audit_log
 from cloud.executors.factory import get_cloud_executor
 from billing.services.trigger import trigger_savings_computation
-from control_plane.services.safety import assert_autopilot_allowed
+from control_plane.services.autopilot_guard import AutopilotGuard
 from ai_engine.reinforcement.policy import OptimizationPolicy
 from ai_engine.reinforcement.trainer import RLTrainer
 from control_plane.services.billing_guard import (
@@ -32,10 +32,10 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
             actor="AUTOPILOT",
             action=plan.action_type,
             resource_id=str(plan.resource.id),
-            status=execution.status, #status="BLOCKED"
+            status=plan.status, #status="BLOCKED"
             metadata={
-                "cloud": plan.resource.cloud_account.provider.slug,
-                "risk_score": execution.decision.risk_score,
+                "cloud": plan.resource.cloud_account.provider.code,
+                "risk_score": plan.risk_score,
                 "savings": plan.estimated_savings,
             }
         )
@@ -46,7 +46,7 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
         raise RuntimeError(f"Invalid execution state: {plan.status}")
 
     # 3️⃣ ORGANIZATION / ACCOUNT SAFETY POLICY
-    assert_autopilot_allowed(
+    AutopilotGuard.validate_account_access(
         cloud_account=plan.cloud_account,
         risk_score=plan.risk_score,
         action=plan.action,
