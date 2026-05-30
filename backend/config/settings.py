@@ -270,7 +270,7 @@ EMAIL_HOST_PASSWORD = "yourpassword"
 """
 
 CORS_ALLOWED_ORIGINS = [
-    "127.0.0.1",
+    "http://127.0.0.1",
     "http://localhost:5173",
     "https://autopilotops.cloud",
     "https://www.autopilotops.cloud",
