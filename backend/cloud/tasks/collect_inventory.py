@@ -33,7 +33,7 @@ def collect_all_cloud_resources(self, org_id):
         try:
             logger.info(
                 f"Syncing account {account.id} "
-                f"({account.provider.slug})"
+                f"({account.provider.code})"
             )
 
             sync_cloud_account_resources(account)

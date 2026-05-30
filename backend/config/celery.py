@@ -53,12 +53,7 @@ app.conf.beat_schedule = {
         "task": "ai_engine.training.tasks.train_models",
         "schedule": crontab(hour=3, minute=0),
     },
-    # Manual trigger for autopilot (can be called from API or admin)
-    "run-autopilot-manual-trigger": {
-        "task": "control_plane.tasks.run_autopilot_for_org",
-        "schedule": crontab(minute="*/30"),
-        "args": (),
-    },
+
 
     "collect-cloud-inventory": {
         "task": "cloud.tasks.collect_inventory.collect_all_cloud_resources",

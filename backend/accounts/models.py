@@ -59,12 +59,11 @@ class AWSAccount(models.Model):
     account_id = models.CharField(max_length=20)
     role_arn = models.CharField(max_length=255)
     external_id = models.CharField(
-        lank=True,
-        nullmax_length=255,
+        max_length=255,
         unique=True,
-        b=True
+        blank=True,
+        null=True,
     )
-
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

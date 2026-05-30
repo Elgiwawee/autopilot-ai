@@ -2,7 +2,9 @@
 
 from cloud.models import CloudAccount
 from actions.services.optimizer import list_optimizations
-from cloud.tasks import collect_aws_ec2_task
+from cloud.tasks.collect_inventory import (
+    collect_all_cloud_resources
+)
 
 
 def build_optimizer(organization):
@@ -14,9 +16,9 @@ def build_optimizer(organization):
     # -----------------------------
     # ASYNC RESOURCE COLLECTION
     # -----------------------------
-    for acc in accounts:
-        if acc.provider.code == "aws":
-            collect_aws_ec2_task.delay(acc.id)  # 🚀 async
+    collect_all_cloud_resources.delay(
+        str(organization.id)
+    )
 
     # -----------------------------
     # RETURN EXISTING OPTIMIZATIONS
