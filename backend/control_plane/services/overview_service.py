@@ -73,9 +73,8 @@ class OverviewService:
             days=7,
         )
 
-        autopilot = AutopilotService.get_effective_status(
-            organization=organization,
-            cloud=cloud,
+        autopilot = AutopilotService.get_status(
+            organization=organization
         )
 
         # ----------------------------
