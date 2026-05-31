@@ -120,3 +120,13 @@ def discover_cloud_account(cloud_account_id):
 
         except Exception:
             pass
+
+@shared_task
+def schedule_autopilot():
+
+    organizations = Organization.objects.filter(
+        is_active=True
+    )
+
+    for org in organizations:
+        run_autopilot_for_org.delay(org.id)

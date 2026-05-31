@@ -11,18 +11,15 @@ app = Celery("config")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
-app.conf.imports = (
-    "ai_engine.autopilot.tasks",
-)
 # ------------------------------
 # Celery Beat Schedule
 # ------------------------------
 
 app.conf.beat_schedule = {
 
-    # Collect AWS metrics
-    "collect-aws-metrics": {
-        "task": "cloud.tasks.collect_aws_ec2_task",
+    # Collect  Cloud metrics
+    "collect-cloud-metrics": {
+        "task": "cloud.tasks.collect_inventory.collect_all_cloud_resources",
         "schedule": crontab(minute="*/5"),
     },
 
@@ -34,7 +31,7 @@ app.conf.beat_schedule = {
 
     # Autopilot brain
     "autopilot-loop": {
-        "task": "ai_engine.autopilot.tasks.autopilot_loop",
+        "task": "control_plane.tasks.schedule_autopilot",
         "schedule": crontab(minute="*/15"),
     },
 
