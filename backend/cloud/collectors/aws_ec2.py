@@ -1,10 +1,10 @@
-# cloud/collectors/aws_ec2.py
+# cloud/collectors/aws_ec2
 
 import boto3
 from cloud.models import CloudAccount, CloudResource
 from cloud.cost.ec2_cost import calculate_ec2_hourly_cost
 from ai_engine.tasks.detector_tasks import scan_cloud_for_opportunities
-
+from cloud.utils.json import json_safe
 
 def collect_ec2_instances(cloud_account_id):
     cloud_account = CloudAccount.objects.get(id=cloud_account_id)
@@ -95,7 +95,7 @@ def collect_ec2_instances(cloud_account_id):
                             "region": region_name,
                             "state": state,
                             "cost_per_hour": hourly_cost,
-                            "metadata": instance,
+                            "metadata": json_safe(instance)
                         },
                     )
 
