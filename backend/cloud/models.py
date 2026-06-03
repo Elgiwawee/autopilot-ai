@@ -53,6 +53,12 @@ class CloudAccount(models.Model):
         editable=False
     )
 
+    external_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
+
     organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
