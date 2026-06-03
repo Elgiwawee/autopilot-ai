@@ -42,10 +42,12 @@ def collect_ec2_instances(cloud_account_id):
     )
 
     regions = ec2_global.describe_regions()["Regions"]
+    print(f"Found {len(regions)} AWS regions")
 
     for region_data in regions:
 
         region_name = region_data["RegionName"]
+        print(f"Scanning region: {region_name}")
 
         ec2 = boto3.client(
             "ec2",
@@ -78,6 +80,10 @@ def collect_ec2_instances(cloud_account_id):
                     hourly_cost = calculate_ec2_hourly_cost(
                         instance,
                         provider="aws"
+                    )
+                    print(
+                        f"Found instance {instance_id} "
+                        f"in {region_name}"
                     )
 
                     CloudResource.objects.update_or_create(
