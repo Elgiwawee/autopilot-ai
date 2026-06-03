@@ -92,7 +92,6 @@ def collect_ec2_instances(cloud_account_id):
                         defaults={
                             "provider": provider,
                             "resource_type": "vm",
-                            "service": "compute",
                             "region": region_name,
                             "state": state,
                             "cost_per_hour": hourly_cost,
