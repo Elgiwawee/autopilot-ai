@@ -79,7 +79,7 @@ def collect_ec2_instances(cloud_account_id):
 
                     hourly_cost = calculate_ec2_hourly_cost(
                         instance,
-                        provider="aws"
+                        provider=provider.code
                     )
                     print(
                         f"Found instance {instance_id} "
@@ -91,7 +91,7 @@ def collect_ec2_instances(cloud_account_id):
                         external_id=instance_id,
                         defaults={
                             "provider": provider,
-                            "resource_type": "ec2",
+                            "resource_type": "vm",
                             "service": "compute",
                             "region": region_name,
                             "state": state,
