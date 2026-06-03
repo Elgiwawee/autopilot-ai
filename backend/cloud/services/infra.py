@@ -11,7 +11,7 @@ def sync_cloud_account_resources(cloud_account):
 
     for resource in resources:
         normalized_type = normalize_resource_type(
-            cloud_account.provider.slug,
+            cloud_account.provider.code,
             resource["resource_type"],
             resource["metadata"]
         )
