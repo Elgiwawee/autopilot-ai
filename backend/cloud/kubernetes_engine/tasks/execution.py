@@ -1,16 +1,15 @@
 # cloud/kubernetes_engine/tasks/execution.py
 
 from celery import shared_task
-from kubernetes_engine.client import KubernetesClient
-from kubernetes_engine.canary import canary_patch
-from kubernetes_engine.observer import observe_canary
-from kubernetes_engine.rollback import rollback_execution
-from kubernetes_engine.models import Policy
+from cloud.kubernetes_engine.client import KubernetesClient
+from cloud.kubernetes_engine.canary import canary_patch
+from cloud.kubernetes_engine.observer import observe_canary
+from cloud.kubernetes_engine.rollback import rollback_execution
 from audit.services.receipt import generate_execution_receipt
 from cloud.kubernetes_engine.policies import enforce_policies, PolicyViolation
 from actions.models import ExecutionRecord
 from django.utils import timezone
-from kubernetes_engine.tasks.evaluate import evaluate_canary
+from cloud.kubernetes_engine.tasks.evaluate import evaluate_canary
 
 @shared_task(bind=True)
 def execute_k8s_rightsizing(self, execution_record_id):

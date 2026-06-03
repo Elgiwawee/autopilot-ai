@@ -1,10 +1,12 @@
 # cloud/kubernetes_engine/tasks/metrics.py
 
 from celery import shared_task
-from kubernetes_engine.client import KubernetesClient
-from kubernetes_engine.metrics import extract_requests, extract_usage
-from kubernetes_engine.models import PodMetrics
-
+from cloud.kubernetes_engine.client import KubernetesClient
+from cloud.kubernetes_engine.metrics import (
+    extract_requests,
+    extract_usage,
+)
+from cloud.kubernetes_engine.models import PodMetrics
 
 @shared_task(
     bind=True,

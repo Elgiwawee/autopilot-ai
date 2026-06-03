@@ -3,12 +3,12 @@
 from celery import shared_task
 from django.utils import timezone
 
-from kubernetes_engine.observer import observe_canary_metrics
-from kubernetes_engine.rollback import rollback_execution
-from kubernetes_engine.client import KubernetesClient
-from actions.models import CanaryWindow, ExecutionRecord
-from kubernetes_engine.models import CanaryWindow
-from kubernetes_engine.tasks.commit import commit_execution
+from cloud.kubernetes_engine.observer import observe_canary
+from cloud.kubernetes_engine.rollback import rollback_execution
+from cloud.kubernetes_engine.client import KubernetesClient
+from actions.models import  ExecutionRecord
+from cloud.kubernetes_engine.models import CanaryWindow
+from cloud.kubernetes_engine.tasks.commit import commit_execution
 
 @shared_task(bind=True)
 def evaluate_canary(self, execution_record_id):
@@ -20,7 +20,7 @@ def evaluate_canary(self, execution_record_id):
     plan = execution.decision.executionplan
     window = CanaryWindow.objects.get(execution_plan=plan)
 
-    metrics = observe_canary_metrics(execution_plan=plan)
+    metrics = observe_canary(execution_plan=plan)
 
     # Persist observations (AUDITABLE)
     window.observed_error_rate = metrics["error_rate"]
