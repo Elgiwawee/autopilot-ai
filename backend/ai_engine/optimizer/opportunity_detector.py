@@ -55,10 +55,21 @@ class OpportunityDetector:
         # -----------------------------
         # 2️⃣ STORAGE DETECTION (EXISTING)
         # -----------------------------
-        storage_plans = self.detect_storage_opportunities(
-            volumes=cloud_account.get_volumes(),
-            snapshots=cloud_account.get_snapshots()
+        volumes = CloudResource.objects.filter(
+            cloud_account=cloud_account,
+            resource_type="volume"
         )
+
+        snapshots = CloudResource.objects.filter(
+            cloud_account=cloud_account,
+            resource_type="snapshot"
+        )
+
+        storage_plans = self.detect_storage_opportunities(
+            volumes=volumes,
+            snapshots=snapshots
+        )
+
         created_plans.extend(storage_plans)
 
         # -----------------------------
