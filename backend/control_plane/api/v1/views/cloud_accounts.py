@@ -102,6 +102,7 @@ class CloudAccountListCreateView(APIView):
             provider=provider,
             account_identifier=account_identifier,
             role_arn=role_arn,
+            external_id=request.data.get("external_id"),
             mode=mode,
             status=CloudAccount.STATUS_PENDING,
             is_active=True,

@@ -17,11 +17,15 @@ def collect_ec2_instances(cloud_account_id):
     # -----------------------------
     sts = boto3.client("sts")
 
-    assumed = sts.assume_role(
-        RoleArn=cloud_account.role_arn,
-        RoleSessionName="cloud-autopilot-session",
-        ExternalId=cloud_account.external_id,  # ✅ IMPORTANT
-    )
+    assume_kwargs = {
+        "RoleArn": cloud_account.role_arn,
+        "RoleSessionName": "cloud-autopilot-session",
+    }
+
+    if cloud_account.external_id:
+        assume_kwargs["ExternalId"] = cloud_account.external_id
+
+    assumed = sts.assume_role(**assume_kwargs)
 
     creds = assumed["Credentials"]
 
