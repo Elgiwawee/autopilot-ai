@@ -34,7 +34,7 @@ def collect_ec2_instances(cloud_account_id):
         aws_access_key_id=creds["AccessKeyId"],
         aws_secret_access_key=creds["SecretAccessKey"],
         aws_session_token=creds["SessionToken"],
-        region_name=cloud_account.region or "us-east-1",
+        region_name="us-east-1",
     )
 
     paginator = ec2.get_paginator("describe_instances")
