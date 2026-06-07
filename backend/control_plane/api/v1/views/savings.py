@@ -21,7 +21,7 @@ class SavingsOverviewView(APIView):
         organization = request.organization
         cloud = request.query_params.get("cloud")
         region = request.query_params.get("region")
-
+        print("REQUEST ORG:", request.organization.id)
         summary = SavingsService.summary(
             organization=organization,
             cloud=cloud,
