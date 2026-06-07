@@ -43,8 +43,10 @@ class ActionExecution(models.Model):
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    action_plan = models.OneToOneField(
-        ActionPlan, on_delete=models.CASCADE
+    optimization = models.ForeignKey(
+        "actions.OptimizationPlan",
+        on_delete=models.CASCADE,
+        related_name="executions",
     )
 
     status = models.CharField(max_length=16, choices=STATUS)

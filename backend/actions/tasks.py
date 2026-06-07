@@ -32,7 +32,7 @@ def run_optimizer_scan():
 @shared_task(bind=True, max_retries=3)
 def execute_action(self, action_execution_id):
     execution = ActionExecution.objects.get(id=action_execution_id)
-    opt = execution.action_plan
+    opt = execution.optimization
 
     execution.status = "executing"
     execution.save()

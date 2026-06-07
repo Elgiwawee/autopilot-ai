@@ -28,8 +28,8 @@ class ApplyOptimizationView(APIView):
 
         # ✅ CREATE EXECUTION RECORD
         execution = ActionExecution.objects.create(
-            action_plan=opt,
-            status="pending"
+            optimization=opt,
+            status="planned",
         )
 
         # ✅ TRIGGER CELERY TASK

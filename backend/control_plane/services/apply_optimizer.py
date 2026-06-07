@@ -1,32 +1,37 @@
 # control_plane/services/apply_optimizer.py
 
-import boto3
+from actions.executors.aws_ec2 import stop_ec2_instance
 
 
 def apply_optimization(opt):
-    provider = opt.cloud_account.provider
+    """
+    Dispatch optimization execution to the proper executor.
+    """
 
-    if provider == "AWS":
+    provider = (
+        getattr(opt.cloud_account.provider, "code", "")
+        .lower()
+    )
+
+    if provider == "aws":
         return apply_aws(opt)
+
+    raise NotImplementedError(
+        f"Provider '{provider}' not supported."
+    )
 
 
 def apply_aws(opt):
-    ec2 = boto3.client("ec2")
+    """
+    Execute AWS optimization.
+    """
 
     if opt.action_type == "TERMINATE":
-        ec2.terminate_instances(
-            InstanceIds=[opt.resource_id]
+        return stop_ec2_instance(
+            instance_id=opt.resource_id,
+            credentials=opt.cloud_account.credentials,
         )
 
-    elif opt.action_type == "RIGHTSIZE":
-        ec2.modify_instance_attribute(
-            InstanceId=opt.resource_id,
-            InstanceType={"Value": "t3.medium"}  # example
-        )
-
-    elif opt.action_type == "SPOT":
-        # simplified example
-        ec2.request_spot_instances(
-            InstanceCount=1,
-            Type="one-time"
-        )
+    raise NotImplementedError(
+        f"Unsupported AWS action '{opt.action_type}'."
+    )
