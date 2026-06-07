@@ -107,7 +107,7 @@ class OpportunityDetector:
 
         resources = CloudResource.objects.filter(
             cloud_account=cloud_account,
-            resource_type="ec2"
+            resource_type__in=["vm", "ec2"],
         )
 
         for res in resources:
@@ -151,7 +151,7 @@ class OpportunityDetector:
         OptimizationPlan.objects.get_or_create(
             cloud_account=resource.cloud_account,
             resource_id=resource.external_id,
-            resource_type="EC2",
+            resource_type=resource.resource_type,
             action_type=action,
             defaults={
                 "estimated_monthly_savings": savings,
