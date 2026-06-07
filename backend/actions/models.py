@@ -47,8 +47,6 @@ class ActionExecution(models.Model):
         "actions.OptimizationPlan",
         on_delete=models.CASCADE,
         related_name="executions",
-        null=True,
-        blank=True,
     )
     status = models.CharField(max_length=16, choices=STATUS)
     executed_at = models.DateTimeField(null=True, blank=True)
