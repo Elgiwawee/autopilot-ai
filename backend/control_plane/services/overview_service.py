@@ -77,6 +77,11 @@ class OverviewService:
             organization=organization
         )
 
+        active = OptimizationPlan.objects.filter(
+            cloud_account__organization=organization,
+            status="PLANNED",
+        ).count()
+
         # ----------------------------
         # Unified Response
         # ----------------------------
@@ -88,10 +93,7 @@ class OverviewService:
                 "monthly_savings": savings["current_month"]["savings"],
                 "lifetime_savings": savings["lifetime"]["total_saved"],
                 "gpu_count": gpu_count,
-                "active_optimizations": OptimizationPlan.objects.filter(
-                    cloud_account__organization=organization,
-                    status="PLANNED",
-                ).count(),
+                "active_optimizations": active,
             },
             "cost_trend": cost_trend,
             "recent_actions": actions[:5],

@@ -57,10 +57,7 @@ export default function Savings() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card title="Total Saved">${overview?.total_saved ?? 0}</Card>
         <Card title="Monthly Savings">${overview?.monthly_savings ?? 0}</Card>
-        <Card title="Potential Savings">
-          ${overview?.potential_monthly_savings ?? 0}
-        </Card>
-        <Card title="Optimization Rate">{overview?.optimization_rate ?? 0}%</Card>
+        <Card title="Potential Savings">${overview?.potential_monthly_savings ?? 0}</Card>
         <Card title="Actions Taken">{overview?.actions ?? 0}</Card>
       </div>
 
@@ -75,15 +72,24 @@ export default function Savings() {
           {recs.map(r => (
             <li key={r.id} className="border-b pb-2">
               <p className="font-medium">
-                {r.action} {r.resource_type}
+                {r.title}
               </p>
 
               <p className="text-sm text-gray-500">
-                Cloud: {r.cloud} | Resource ID: {r.resource_id}
+                {r.description}
+              </p>
+
+              <p className="text-sm text-gray-500">
+                Cloud: {r.cloud}
+              </p>
+
+              <p className="text-sm text-gray-500">
+                {r.resource}
               </p>
 
               <p className="text-sm">
-                Estimated saving: <strong>${r.estimated_monthly_savings}</strong>
+                Estimated saving:
+                <strong>${r.savings}</strong>
               </p>
 
               <p className="text-xs text-gray-400">
