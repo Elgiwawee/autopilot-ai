@@ -53,8 +53,16 @@ def execute_action(self, action_execution_id):
         execution.executed_at = now()
         execution.save()
 
+        # Mark optimization as completed
+        opt.status = "COMPLETED"
+        opt.save(update_fields=["status"])
+
     except Exception as e:
         execution.status = "failed"
         execution.error_message = str(e)
         execution.save()
+
+        # Mark optimization as failed
+        opt.status = "FAILED"
+        opt.save(update_fields=["status"])
         raise

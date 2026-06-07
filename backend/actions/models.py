@@ -96,10 +96,13 @@ class OptimizationPlan(models.Model):
         max_length=20,
         choices=[
             ("PLANNED", "PLANNED"),
-            ("REJECTED", "REJECTED"),
             ("APPROVED", "APPROVED"),
+            ("IN_PROGRESS", "IN_PROGRESS"),
+            ("COMPLETED", "COMPLETED"),
+            ("FAILED", "FAILED"),
+            ("REJECTED", "REJECTED"),
         ],
-        default="PLANNED"
+        default="PLANNED",
     )
 
 class EC2IdlePlanner:

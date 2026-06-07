@@ -35,9 +35,9 @@ class ApplyOptimizationView(APIView):
         # ✅ TRIGGER CELERY TASK
         execute_action.delay(execution.id)
 
-        # ✅ UPDATE PLAN STATUS
+        
         opt.status = "IN_PROGRESS"
-        opt.save()
+        opt.save(update_fields=["status"])
 
         return Response({
             "message": "Execution started",

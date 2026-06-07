@@ -31,7 +31,7 @@ def blast_radius_exceeded(organization, max_actions: int) -> bool:
     window_start = timezone.now() - timezone.timedelta(hours=24)
 
     executed_recently = ActionExecution.objects.filter(
-        action_plan__resource__cloud_account__organization=organization,
+        optimization__cloud_account__organization=organization,
         executed_at__gte=window_start,
         status="success",
     ).count()
