@@ -114,10 +114,15 @@ class OpportunityDetector:
 
             monthly_cost = (res.cost_per_hour or 0) * 24 * 30
 
-            # -----------------------------
-            # STOPPED INSTANCE
-            # -----------------------------
+            print(
+                f"Processing {res.external_id} "
+                f"state={res.state} "
+                f"cost={res.cost_per_hour}"
+            )
+
             if res.state == "stopped":
+                print(f"Creating TERMINATE plan for {res.external_id}")
+
                 self.create_plan(
                     res,
                     "TERMINATE",
@@ -125,10 +130,9 @@ class OpportunityDetector:
                     0.95
                 )
 
-            # -----------------------------
-            # EXPENSIVE INSTANCE
-            # -----------------------------
             elif res.cost_per_hour and res.cost_per_hour > 0.08:
+                print(f"Creating RIGHTSIZE plan for {res.external_id}")
+
                 self.create_plan(
                     res,
                     "RIGHTSIZE",
@@ -136,10 +140,9 @@ class OpportunityDetector:
                     0.8
                 )
 
-            # -----------------------------
-            # LOW IMPACT
-            # -----------------------------
             else:
+                print(f"Creating RECOMMEND plan for {res.external_id}")
+
                 self.create_plan(
                     res,
                     "RECOMMEND",
@@ -151,6 +154,11 @@ class OpportunityDetector:
         """
         Create an OptimizationPlan from a discovered CloudResource.
         """
+        print(
+            f"create_plan called: "
+            f"{resource.external_id} "
+            f"{action}"
+        )
 
         current_state = {
             "state": resource.state,
