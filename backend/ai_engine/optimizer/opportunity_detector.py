@@ -1,5 +1,5 @@
 # ai_engine/optimizer/opportunity_detector.py
-
+from decimal import Decimal
 from monitoring.services.metrics_collector import collect_metrics
 from ai_engine.optimizer.opportunity_rules import OpportunityRules
 from ai_engine.models.opportunity import OptimizationOpportunity
@@ -130,13 +130,13 @@ class OpportunityDetector:
                     0.95
                 )
 
-            elif res.cost_per_hour and res.cost_per_hour > 0.08:
+            elif res.cost_per_hour and res.cost_per_hour > Decimal("0.08"):
                 print(f"Creating RIGHTSIZE plan for {res.external_id}")
 
                 self.create_plan(
                     res,
                     "RIGHTSIZE",
-                    monthly_cost * 0.4,
+                    monthly_cost * Decimal("0.4"),
                     0.8
                 )
 
@@ -146,7 +146,7 @@ class OpportunityDetector:
                 self.create_plan(
                     res,
                     "RECOMMEND",
-                    monthly_cost * 0.1,
+                    monthly_cost * Decimal("0.1"),
                     0.6
                 )
 
