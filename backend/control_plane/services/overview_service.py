@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from typing import Optional
-
+from actions.models import OptimizationPlan
 from accounts.services.autopilot_service import AutopilotService
 from ai_engine.services.ai_service import AIService
 from billing.services.savings_service import SavingsService
@@ -88,7 +88,10 @@ class OverviewService:
                 "monthly_savings": savings["current_month"]["savings"],
                 "lifetime_savings": savings["lifetime"]["total_saved"],
                 "gpu_count": gpu_count,
-                "active_optimizations": len(actions),
+                "active_optimizations": OptimizationPlan.objects.filter(
+                    cloud_account__organization=organization,
+                    status="PLANNED",
+                ).count(),
             },
             "cost_trend": cost_trend,
             "recent_actions": actions[:5],

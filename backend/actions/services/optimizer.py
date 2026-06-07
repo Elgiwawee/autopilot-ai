@@ -29,7 +29,7 @@ def list_optimizations(organization, cloud=None):
             "savings": float(opt.estimated_monthly_savings),
 
             # ✅ EXTRA DATA (future use)
-            "cloud": opt.cloud_account.provider,
+            "cloud": opt.cloud_account.provider.code,
             "action": opt.action_type,
             "confidence": opt.confidence,
             "status": opt.status,

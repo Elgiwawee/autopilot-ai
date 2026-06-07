@@ -3,7 +3,7 @@
 from django.db.models import Sum, Count
 from django.utils.timezone import now
 from billing.models import SavingsEvent
-
+from actions.models import OptimizationPlan
 
 class SavingsService:
     """
@@ -59,6 +59,16 @@ class SavingsService:
             saved=Sum("savings_amount")
         )
 
+        potential = (
+            OptimizationPlan.objects.filter(
+                cloud_account__organization=organization,
+                status="PLANNED",
+            )
+            .aggregate(
+                total=Sum("estimated_monthly_savings")
+            )["total"] or 0
+        )
+
         return {
             "currency": "USD",
             "current_month": {
@@ -68,4 +78,7 @@ class SavingsService:
                 "total_saved": float(lifetime["total_saved"] or 0),
                 "actions_taken": lifetime["actions_taken"] or 0,
             },
+            "potential_monthly_savings": float(potential),
         }
+    
+        
