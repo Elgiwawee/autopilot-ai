@@ -24,7 +24,7 @@ class ActionService:
 
         if cloud:
             qs = qs.filter(
-                optimization__cloud_account__provider__slug=cloud
+                optimization__cloud_account__provider__code=cloud
             )
 
         if region:
@@ -40,7 +40,7 @@ class ActionService:
                 "status": a.status,
                 "executed_at": a.executed_at,
                 "cloud": (
-                    a.optimization.cloud_account.provider.slug
+                    a.optimization.cloud_account.provider.code
                     if a.optimization
                     else None
                 ),
