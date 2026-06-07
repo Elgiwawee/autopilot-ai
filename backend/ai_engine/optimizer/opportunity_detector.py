@@ -148,14 +148,44 @@ class OpportunityDetector:
                 )
 
     def create_plan(self, resource, action, savings, confidence):
+        """
+        Create an OptimizationPlan from a discovered CloudResource.
+        """
+
+        current_state = {
+            "state": resource.state,
+            "resource_type": resource.resource_type,
+            "region": resource.region,
+            "cost_per_hour": float(resource.cost_per_hour or 0),
+        }
+
+        if action == "TERMINATE":
+            proposed_state = {
+                "state": "terminated",
+            }
+
+        elif action == "RIGHTSIZE":
+            proposed_state = {
+                "state": resource.state,
+                "action": "resize_to_smaller_instance",
+            }
+
+        else:
+            proposed_state = {
+                "state": resource.state,
+                "action": "review",
+            }
+
         OptimizationPlan.objects.get_or_create(
             cloud_account=resource.cloud_account,
             resource_id=resource.external_id,
-            resource_type=resource.resource_type,
+            resource_type=resource.resource_type.upper(),
             action_type=action,
             defaults={
+                "current_state": current_state,
+                "proposed_state": proposed_state,
                 "estimated_monthly_savings": savings,
                 "confidence": confidence,
                 "status": "PLANNED",
-            }
+            },
         )
