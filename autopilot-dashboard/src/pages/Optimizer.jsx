@@ -89,30 +89,42 @@ export default function Optimizer() {
               </span>
 
               <span
-              className={
-                opt.status === "COMPLETED"
-                  ? "text-green-600 font-semibold"
-                  : opt.status === "FAILED"
-                  ? "text-red-600 font-semibold"
-                  : opt.status === "IN_PROGRESS"
-                  ? "text-yellow-600 font-semibold"
-                  : "text-blue-600 font-semibold"
-              }
-            >
-              Status: {opt.status}
-            </span>
-            
+                className={
+                  opt.status === "COMPLETED"
+                    ? "text-green-600 font-semibold"
+                    : opt.status === "FAILED"
+                    ? "text-red-600 font-semibold"
+                    : opt.status === "IN_PROGRESS"
+                    ? "text-yellow-600 font-semibold"
+                    : opt.status === "PLANNED"
+                    ? "text-blue-600 font-semibold"
+                    : "text-gray-600 font-semibold"
+                }
+              >
+                {opt.status === "COMPLETED" && "✅ Completed"}
+                {opt.status === "FAILED" && "❌ Failed"}
+                {opt.status === "IN_PROGRESS" && "⏳ Executing"}
+                {opt.status === "PLANNED" && "📋 Pending"}
+              </span>
+
             </div>
           </div>
+          {/* ACTION BUTTON */}
 
-          {/* APPLY BUTTON */}
-            <div>
+          <div>
             {applying === opt.id ? (
               <button
                 disabled
                 className="bg-gray-400 text-white px-4 py-2 rounded text-sm"
               >
                 Applying...
+              </button>
+            ) : opt.action === "RECOMMEND" ? (
+              <button
+                disabled
+                className="bg-sky-600 text-white px-4 py-2 rounded text-sm cursor-not-allowed"
+              >
+                💡 Recommendation
               </button>
             ) : opt.status === "PLANNED" ? (
               <button
@@ -151,6 +163,8 @@ export default function Optimizer() {
               </button>
             )}
           </div>
+
+
         </div>
       ))}
     </div>

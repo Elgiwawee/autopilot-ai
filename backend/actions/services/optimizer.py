@@ -3,14 +3,23 @@
 from actions.models import OptimizationPlan
 
 
-def list_optimizations(organization, cloud=None):
+def list_optimizations(organization, cloud=None, status=None):
     qs = OptimizationPlan.objects.filter(
-        cloud_account__organization=organization,
-        status="PLANNED",
-    ).select_related("cloud_account")
+        cloud_account__organization=organization
+    )
+
+    if status:
+        qs = qs.filter(status=status)
 
     if cloud:
-        qs = qs.filter(cloud_account__provider=cloud)
+        qs = qs.filter(
+            cloud_account__provider=cloud
+        )
+
+    qs = (
+            qs.select_related("cloud_account")
+            .order_by("-created_at")
+    )
 
     results = []
 
