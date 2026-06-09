@@ -14,6 +14,10 @@ from billing.services.savings_attribution import (
 from cloud.tasks.collect_inventory import (
     collect_all_cloud_resources
 )
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 @shared_task
 def run_optimizer_scan():
@@ -42,8 +46,8 @@ def execute_action(self, action_execution_id):
         # 🔥 ACTION ROUTER
         if opt.action_type == "TERMINATE":
             stop_ec2_instance(
-                opt.resource_id,
-                credentials=opt.cloud_account.credentials  # adapt this
+                instance_id=opt.resource_id,
+                cloud_account=opt.cloud_account,
             )
 
         # future:
@@ -52,21 +56,36 @@ def execute_action(self, action_execution_id):
 
         execution.status = "success"
         execution.executed_at = now()
-        execution.save()
+        execution.save(
+            update_fields=[
+                "status",
+                "executed_at",
+            ]
+        )
 
         # Mark optimization as completed
         opt.status = "COMPLETED"
         opt.save(update_fields=["status"])
 
+        SavingsAttributionService.record(execution)
+
     except Exception as e:
+        logger.exception("Execution failed")
+
         execution.status = "failed"
         execution.error_message = str(e)
-        execution.save()
+        execution.save(
+            update_fields=[
+                "status",
+                "executed_at",
+            ]
+        )
 
-        # Mark optimization as failed
         opt.status = "FAILED"
         opt.save(update_fields=["status"])
+
+        raise
         
         
 
-    SavingsAttributionService.record(execution)
+    
