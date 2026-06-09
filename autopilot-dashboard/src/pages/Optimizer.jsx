@@ -87,17 +87,70 @@ export default function Optimizer() {
               <span className="text-blue-400">
                 Confidence: {Math.round(opt.confidence * 100)}%
               </span>
+
+              <span
+              className={
+                opt.status === "COMPLETED"
+                  ? "text-green-600 font-semibold"
+                  : opt.status === "FAILED"
+                  ? "text-red-600 font-semibold"
+                  : opt.status === "IN_PROGRESS"
+                  ? "text-yellow-600 font-semibold"
+                  : "text-blue-600 font-semibold"
+              }
+            >
+              Status: {opt.status}
+            </span>
+            
             </div>
           </div>
 
           {/* APPLY BUTTON */}
-          <button
-            onClick={() => handleApply(opt.id)}
-            disabled={applying === opt.id}
-            className="bg-primary text-white px-4 py-2 rounded text-sm"
-          >
-            {applying === opt.id ? "Applying..." : "Apply"}
-          </button>
+            <div>
+            {applying === opt.id ? (
+              <button
+                disabled
+                className="bg-gray-400 text-white px-4 py-2 rounded text-sm"
+              >
+                Applying...
+              </button>
+            ) : opt.status === "PLANNED" ? (
+              <button
+                onClick={() => handleApply(opt.id)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+              >
+                Apply
+              </button>
+            ) : opt.status === "IN_PROGRESS" ? (
+              <button
+                disabled
+                className="bg-yellow-500 text-white px-4 py-2 rounded text-sm cursor-not-allowed"
+              >
+                ⏳ Executing...
+              </button>
+            ) : opt.status === "COMPLETED" ? (
+              <button
+                disabled
+                className="bg-green-600 text-white px-4 py-2 rounded text-sm cursor-not-allowed"
+              >
+                ✅ Applied
+              </button>
+            ) : opt.status === "FAILED" ? (
+              <button
+                onClick={() => handleApply(opt.id)}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
+              >
+                Retry
+              </button>
+            ) : (
+              <button
+                disabled
+                className="bg-gray-500 text-white px-4 py-2 rounded text-sm"
+              >
+                {opt.status}
+              </button>
+            )}
+          </div>
         </div>
       ))}
     </div>

@@ -55,10 +55,21 @@ export default function Savings() {
 
       {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card title="Total Saved">${overview?.total_saved ?? 0}</Card>
-        <Card title="Monthly Savings">${overview?.monthly_savings ?? 0}</Card>
-        <Card title="Potential Savings">${overview?.potential_monthly_savings ?? 0}</Card>
-        <Card title="Actions Taken">{overview?.actions ?? 0}</Card>
+        <Card title="Total Saved">
+          ${overview?.lifetime?.total_saved ?? 0}
+        </Card>
+
+        <Card title="Monthly Savings">
+          ${overview?.current_month?.savings ?? 0}
+        </Card>
+
+        <Card title="Potential Savings">
+          ${overview?.potential_monthly_savings ?? 0}
+        </Card>
+
+        <Card title="Actions Taken">
+          {overview?.lifetime?.actions_taken ?? 0}
+        </Card>
       </div>
 
       {/* Trend */}
