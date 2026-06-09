@@ -37,7 +37,7 @@ class SavingsService:
         # Optional cloud filter (provider slug based)
         if cloud:
             qs = qs.filter(
-                cloud_account__provider__slug=cloud
+                cloud=cloud
             )
 
         # Optional region filter (if relation exists)

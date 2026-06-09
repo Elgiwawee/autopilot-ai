@@ -97,6 +97,11 @@ class SavingsEvent(models.Model):
     occurred_at = models.DateTimeField(auto_now_add=True)
 
     is_billable = models.BooleanField(default=True)
+    region = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
 
 
 class BaselineSnapshot(models.Model):

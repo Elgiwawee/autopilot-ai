@@ -5,11 +5,12 @@ from django.utils.timezone import now
 
 from cloud.models import CloudAccount
 from actions.models import ActionExecution
-
 from ai_engine.tasks.detector_tasks import scan_cloud_for_opportunities
 
 from actions.executors.aws_ec2 import stop_ec2_instance
-
+from billing.services.savings_attribution import (
+    SavingsAttributionService,
+)
 from cloud.tasks.collect_inventory import (
     collect_all_cloud_resources
 )
@@ -65,4 +66,7 @@ def execute_action(self, action_execution_id):
         # Mark optimization as failed
         opt.status = "FAILED"
         opt.save(update_fields=["status"])
-        raise
+        
+        
+
+    SavingsAttributionService.record(execution)
