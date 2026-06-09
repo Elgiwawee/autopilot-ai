@@ -30,7 +30,7 @@ export default function Autopilot() {
   if (loading) return <Spinner />;
 
   const autoDisabled =
-    effective_status === "DISABLED";
+    status?.effective_status === "DISABLED";
 
   const changeMode = (accountId, mode) => {
     if (autoDisabled) return;
