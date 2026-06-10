@@ -18,14 +18,34 @@ class OpportunityRules:
 
             avg_cpu = sum(values) / len(values)
 
-            # Detect underutilized instance
-            if avg_cpu < 15:
+            # Very underutilized -> terminate candidate
+            if avg_cpu < 5:
 
                 opportunities.append({
                     "resource_id": m["resource_id"],
                     "resource_type": "compute",
-                    "action_type": "RESIZE_INSTANCE",
+                    "action_type": "TERMINATE",
+                    "estimated_savings": 100,
+                })
+
+            # Moderately underutilized -> rightsize
+            elif avg_cpu < 20:
+
+                opportunities.append({
+                    "resource_id": m["resource_id"],
+                    "resource_type": "compute",
+                    "action_type": "RIGHTSIZE",
                     "estimated_savings": 50,
+                })
+
+            # High utilization -> recommend scale review
+            elif avg_cpu > 85:
+
+                opportunities.append({
+                    "resource_id": m["resource_id"],
+                    "resource_type": "compute",
+                    "action_type": "RECOMMEND",
+                    "estimated_savings": 0,
                 })
 
         return opportunities

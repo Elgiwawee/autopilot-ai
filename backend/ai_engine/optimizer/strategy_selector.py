@@ -9,19 +9,20 @@ class StrategySelector:
 
     def select_strategy(self, resource_type):
 
-        strategies = OptimizationStrategy.objects.filter(
-            resource_type=resource_type,
-            enabled=True
+        strategies = list(
+            OptimizationStrategy.objects.filter(
+                resource_type=resource_type,
+                enabled=True,
+                avg_reward__gte=0,
+            ).order_by("-avg_reward")
         )
 
-        if not strategies.exists():
+        if not strategies:
             return None
 
-        # prioritize highest reward
-        strategies = strategies.order_by("-avg_reward")
-
-        # exploration
+        # 15% exploration
         if random.random() < 0.15:
-            return random.choice(list(strategies))
+            return random.choice(strategies)
 
-        return strategies.first()
+        # 85% exploitation (best known strategy)
+        return strategies[0]

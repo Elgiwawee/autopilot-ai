@@ -104,7 +104,7 @@ class OpportunityDetector:
         Fallback detection when metrics are missing
         Uses CloudResource directly
         """
-
+        generated = set()
         resources = CloudResource.objects.filter(
             cloud_account=cloud_account,
             resource_type__in=["vm", "ec2"],
@@ -130,6 +130,13 @@ class OpportunityDetector:
                     0.95
                 )
 
+                generated.add(
+                    (
+                        res.external_id,
+                        "TERMINATE",
+                    )
+                )
+
             elif res.cost_per_hour and res.cost_per_hour > Decimal("0.08"):
                 print(f"Creating RIGHTSIZE plan for {res.external_id}")
 
@@ -138,6 +145,13 @@ class OpportunityDetector:
                     "RIGHTSIZE",
                     monthly_cost * Decimal("0.4"),
                     0.8
+                )
+
+                generated.add(
+                    (
+                        res.external_id,
+                        "RIGHTSIZE",
+                    )
                 )
 
             else:
@@ -150,15 +164,80 @@ class OpportunityDetector:
                     0.6
                 )
 
+                generated.add(
+                    (
+                        res.external_id,
+                        "RECOMMEND",
+                    )
+                )
+        
+        for plan in OptimizationPlan.objects.filter(
+            cloud_account=cloud_account,
+            status__in=[
+                "PLANNED",
+                "APPROVED",
+            ],
+        ):
+            key = (
+                plan.resource_id,
+                plan.action_type,
+            )
+
+            if key not in generated:
+                plan.status = "SUPERSEDED"
+                plan.save(update_fields=["status"])
+
     def create_plan(self, resource, action, savings, confidence):
         """
         Create an OptimizationPlan from a discovered CloudResource.
+        Avoid duplicate ACTIVE plans while allowing future recommendations.
         """
+
         print(
             f"create_plan called: "
             f"{resource.external_id} "
             f"{action}"
         )
+
+        # ------------------------------------
+        # Prevent duplicate ACTIVE plans only
+        # ------------------------------------
+
+        existing = (
+            OptimizationPlan.objects.filter(
+                cloud_account=resource.cloud_account,
+                resource_id=resource.external_id,
+                action_type=action,
+                status__in=[
+                    "PLANNED",
+                    "APPROVED",
+                    "IN_PROGRESS",
+                ],
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
+        if existing:
+            existing.current_state = current_state
+            existing.proposed_state = proposed_state
+            existing.estimated_monthly_savings = savings
+            existing.confidence = confidence
+
+            existing.save(
+                update_fields=[
+                    "current_state",
+                    "proposed_state",
+                    "estimated_monthly_savings",
+                    "confidence",
+                ]
+            )
+
+            print(
+                f"Updated existing optimization plan {existing.id}"
+            )
+
+            return existing
 
         current_state = {
             "state": resource.state,
@@ -178,22 +257,30 @@ class OpportunityDetector:
                 "action": "resize_to_smaller_instance",
             }
 
+        elif action == "SPOT":
+            proposed_state = {
+                "state": resource.state,
+                "action": "migrate_to_spot",
+            }
+
         else:
             proposed_state = {
                 "state": resource.state,
                 "action": "review",
             }
 
-        OptimizationPlan.objects.get_or_create(
+        plan = OptimizationPlan.objects.create(
             cloud_account=resource.cloud_account,
             resource_id=resource.external_id,
             resource_type=resource.resource_type.upper(),
             action_type=action,
-            defaults={
-                "current_state": current_state,
-                "proposed_state": proposed_state,
-                "estimated_monthly_savings": savings,
-                "confidence": confidence,
-                "status": "PLANNED",
-            },
+            current_state=current_state,
+            proposed_state=proposed_state,
+            estimated_monthly_savings=savings,
+            confidence=confidence,
+            status="PLANNED",
         )
+
+        print(f"Created new optimization plan {plan.id}")
+
+        return plan

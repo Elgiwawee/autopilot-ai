@@ -14,16 +14,30 @@ class StrategyGenerator:
 
         # small mutation variations
         mutations = [
-            {"cpu_reduction": 1},
-            {"cpu_reduction": 2},
-            {"memory_reduction": "10%"},
-            {"memory_reduction": "20%"},
+            {
+                "instance_factor": 0.5,
+                "memory_factor": 0.5,
+            },
+            {
+                "instance_factor": 0.75,
+                "memory_factor": 0.75,
+            },
+            {
+                "spot_candidate": True,
+            },
+            {
+                "gp3_conversion": True,
+            },
         ]
 
         parameters = random.choice(mutations)
 
         strategy = OptimizationStrategy.objects.create(
-            name=f"{action_type}_{resource_type}_variant",
+            name=(
+                f"{action_type}_"
+                f"{resource_type}_"
+                f"{random.randint(100000,999999)}"
+            ),
             action_type=action_type,
             resource_type=resource_type,
             parameters=parameters,

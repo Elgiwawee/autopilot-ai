@@ -101,6 +101,7 @@ class OptimizationPlan(models.Model):
             ("COMPLETED", "COMPLETED"),
             ("FAILED", "FAILED"),
             ("REJECTED", "REJECTED"),
+            ("SUPERSEDED", "SUPERSEDED"),
         ],
         default="PLANNED",
     )
