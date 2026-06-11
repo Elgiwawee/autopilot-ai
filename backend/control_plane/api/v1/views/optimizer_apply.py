@@ -46,15 +46,12 @@ class ApplyOptimizationView(APIView):
         # ---------------------------------------
 
         if opt.action_type == "RECOMMEND":
-
-            opt.status = "COMPLETED"
-            opt.save(update_fields=["status"])
-
-            return Response({
-                "message": "Recommendation acknowledged.",
-                "optimization_id": opt.id,
-            })
-
+            return Response(
+                {
+                    "message": "This recommendation does not require execution."
+                }
+            )
+        
         # ---------------------------------------
         # EXECUTABLE ACTIONS
         # ---------------------------------------

@@ -81,6 +81,7 @@ def execute_action(self, action_execution_id):
             stop_ec2_instance(
                 instance_id=optimization.resource_id,
                 cloud_account=optimization.cloud_account,
+                region=optimization.current_state.get("region"),
             )
 
         # ----------------------------------

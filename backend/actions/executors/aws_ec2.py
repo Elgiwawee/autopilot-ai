@@ -1,7 +1,13 @@
+# actions/executors/aws_ec2.py
+
 import boto3
 
 
-def stop_ec2_instance(instance_id, cloud_account):
+def stop_ec2_instance(
+    instance_id,
+    cloud_account,
+    region,
+):
     """
     Stops an EC2 instance using AssumeRole credentials.
     """
@@ -25,7 +31,7 @@ def stop_ec2_instance(instance_id, cloud_account):
         aws_access_key_id=creds["AccessKeyId"],
         aws_secret_access_key=creds["SecretAccessKey"],
         aws_session_token=creds["SessionToken"],
-        region_name="us-east-1",  # we'll improve this later
+        region_name=region,
     )
 
     return ec2.stop_instances(

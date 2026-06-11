@@ -170,7 +170,7 @@ class OpportunityDetector:
                         "RECOMMEND",
                     )
                 )
-        
+
         for plan in OptimizationPlan.objects.filter(
             cloud_account=cloud_account,
             status__in=[
@@ -199,45 +199,6 @@ class OpportunityDetector:
             f"{action}"
         )
 
-        # ------------------------------------
-        # Prevent duplicate ACTIVE plans only
-        # ------------------------------------
-
-        existing = (
-            OptimizationPlan.objects.filter(
-                cloud_account=resource.cloud_account,
-                resource_id=resource.external_id,
-                action_type=action,
-                status__in=[
-                    "PLANNED",
-                    "APPROVED",
-                    "IN_PROGRESS",
-                ],
-            )
-            .order_by("-created_at")
-            .first()
-        )
-
-        if existing:
-            existing.current_state = current_state
-            existing.proposed_state = proposed_state
-            existing.estimated_monthly_savings = savings
-            existing.confidence = confidence
-
-            existing.save(
-                update_fields=[
-                    "current_state",
-                    "proposed_state",
-                    "estimated_monthly_savings",
-                    "confidence",
-                ]
-            )
-
-            print(
-                f"Updated existing optimization plan {existing.id}"
-            )
-
-            return existing
 
         current_state = {
             "state": resource.state,
@@ -269,6 +230,47 @@ class OpportunityDetector:
                 "action": "review",
             }
 
+        # ------------------------------------
+        # Prevent duplicate ACTIVE plans only
+        # ------------------------------------
+
+        existing = (
+            OptimizationPlan.objects.filter(
+                cloud_account=resource.cloud_account,
+                resource_id=resource.external_id,
+                action_type=action,
+                status__in=[
+                    "PLANNED",
+                    "APPROVED",
+                    "IN_PROGRESS",
+                ]
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
+        if existing:
+            existing.current_state = current_state
+            existing.proposed_state = proposed_state
+            existing.estimated_monthly_savings = savings
+            existing.confidence = confidence
+
+            existing.save(
+                update_fields=[
+                    "current_state",
+                    "proposed_state",
+                    "estimated_monthly_savings",
+                    "confidence",
+                ]
+            )
+
+            print(
+                f"Updated existing optimization plan {existing.id}"
+            )
+
+            return existing
+
+        
         plan = OptimizationPlan.objects.create(
             cloud_account=resource.cloud_account,
             resource_id=resource.external_id,
