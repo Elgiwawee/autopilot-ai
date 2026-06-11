@@ -10,6 +10,9 @@ from ai_engine.storage.zombie import is_zombie, generate_delete_plan
 from ai_engine.storage.snapshots import analyze_snapshots
 from cloud.models import CloudResource
 from actions.models import OptimizationPlan
+from ai_engine.gpu.models import GPUMetric
+from ai_engine.gpu.features import extract_features
+from ai_engine.gpu.infer import gpu_decision
 
 class OpportunityDetector:
     """
@@ -71,6 +74,14 @@ class OpportunityDetector:
         )
 
         created_plans.extend(storage_plans)
+
+        # -----------------------------
+        # GPU AI DETECTION
+        # -----------------------------
+
+        self.detect_gpu_opportunities(
+            cloud_account
+        )
 
         # -----------------------------
         # 3️⃣ 🔥 FALLBACK EC2 DETECTION (NEW)
@@ -286,3 +297,48 @@ class OpportunityDetector:
         print(f"Created new optimization plan {plan.id}")
 
         return plan
+    
+    def detect_gpu_opportunities(
+        self,
+        cloud_account,
+    ):
+        """
+        Uses ML model to detect underutilized GPUs.
+        """
+
+        gpu_resources = CloudResource.objects.filter(
+            cloud_account=cloud_account,
+            resource_type="gpu",
+        )
+
+        for gpu in gpu_resources:
+
+            metrics = GPUMetric.objects.filter(
+                workload_id=gpu.external_id,
+            ).order_by("-timestamp")[:100]
+
+            if metrics.count() < 5:
+                continue
+
+            features = extract_features(metrics)
+
+            p95 = features[1]
+
+            decision = gpu_decision(
+                features,
+                p95,
+            )
+
+            if decision != "DOWNGRADE_GPU":
+                continue
+
+            monthly_cost = (
+                gpu.cost_per_hour or 0
+            ) * 24 * 30
+
+            self.create_plan(
+                resource=gpu,
+                action="RIGHTSIZE",
+                savings=monthly_cost * Decimal("0.35"),
+                confidence=0.88,
+            )

@@ -86,16 +86,66 @@ def collect_ec2_instances(cloud_account_id):
                         f"in {region_name}"
                     )
 
+                    instance_type = instance.get("InstanceType", "")
+
+                    GPU_PREFIXES = (
+                        "g4",
+                        "g5",
+                        "g6",
+                        "p2",
+                        "p3",
+                        "p4",
+                        "p5",
+                        "trn1",
+                        "inf1",
+                        "inf2",
+                    )
+
+                    resource_type = (
+                        "gpu"
+                        if instance_type.startswith(GPU_PREFIXES)
+                        else "vm"
+                    )
+
+                    metadata = json_safe(instance)
+
+                    metadata["instance_type"] = instance.get("InstanceType")
+
+                    metadata["availability_zone"] = (
+                        instance.get("Placement", {})
+                        .get("AvailabilityZone")
+                    )
+
+                    metadata["private_ip"] = instance.get("PrivateIpAddress")
+
+                    metadata["public_ip"] = instance.get("PublicIpAddress")
+
+                    metadata["architecture"] = instance.get("Architecture")
+
+                    metadata["platform"] = instance.get("PlatformDetails")
+
+                    metadata["launch_time"] = (
+                        instance.get("LaunchTime").isoformat()
+                        if instance.get("LaunchTime")
+                        else None
+                    )
+
+                    metadata["gpu_utilization"] = 0
+
+                    metadata["memory_gb"] = None
+
+                    metadata["attached_to"] = None
+
                     CloudResource.objects.update_or_create(
                         cloud_account=cloud_account,
                         external_id=instance_id,
                         defaults={
                             "provider": provider,
-                            "resource_type": "vm",
+                            "resource_type": resource_type,
                             "region": region_name,
                             "state": state,
                             "cost_per_hour": hourly_cost,
-                            "metadata": json_safe(instance)
+                            "metadata": metadata,
                         },
                     )
 

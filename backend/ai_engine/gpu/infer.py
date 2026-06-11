@@ -1,13 +1,40 @@
 # ai_engine/gpu/infer.py
 
+from pathlib import Path
+
 import joblib
 
-model = joblib.load("gpu_model.pkl")
+MODEL_PATH = Path(__file__).parent / "gpu_model.pkl"
 
-def gpu_decision(features, p95):
+_model = None
+
+
+def load_model():
+    global _model
+
+    if _model is None:
+        if MODEL_PATH.exists():
+            _model = joblib.load(MODEL_PATH)
+
+    return _model
+
+
+def gpu_decision(features):
+    """
+    Returns:
+        prediction,
+        confidence
+    """
+
+    model = load_model()
+
+    if model is None:
+        return "UNKNOWN", 0.0
+
     prediction = model.predict([features])[0]
 
-    if prediction == 0 and p95 < 40:
-        return "DOWNGRADE_GPU"
+    probabilities = model.predict_proba([features])[0]
 
-    return "NO_ACTION"
+    confidence = max(probabilities)
+
+    return prediction, confidence

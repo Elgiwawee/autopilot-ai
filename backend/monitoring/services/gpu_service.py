@@ -23,7 +23,10 @@ class GPUService:
         return CloudResource.objects.filter(
             cloud_account__in=active_accounts,
             resource_type="gpu",
-        ).select_related("provider", "cloud_account")
+        ).select_related(
+            "cloud_account", 
+            "cloud_account__provider",
+        )
 
     # ----------------------------------------------------
     # Public Methods
@@ -39,7 +42,7 @@ class GPUService:
         qs = cls._base_queryset(organization)
 
         if cloud:
-            qs = qs.filter(cloud_account__provider__slug=cloud)
+            qs = qs.filter(cloud_account__provider__code=cloud)
 
         if region:
             qs = qs.filter(region=region)
@@ -59,7 +62,7 @@ class GPUService:
         qs = cls._base_queryset(organization)
 
         if cloud:
-            qs = qs.filter(cloud_account__provider__slug=cloud)
+            qs = qs.filter(cloud_account__provider__code=cloud)
 
         if region:
             qs = qs.filter(region=region)
@@ -72,15 +75,28 @@ class GPUService:
 
     @staticmethod
     def _serialize(resource):
+        monthly_cost = float(resource.cost_per_hour or 0) * 730
+
+        utilization = float(
+            resource.metadata.get("gpu_utilization")
+            or resource.metadata.get("utilization")
+            or 0
+        )
+
         return {
             "id": str(resource.id),
-            "provider": resource.provider.name,
-            "cloud_account": str(resource.cloud_account.id),
-            "external_id": resource.external_id,
+
+            # frontend fields
+            "name": resource.external_id,
+            "model": resource.metadata.get("model", "Unknown"),
+            "utilization": utilization,
+            "status": resource.state,
+            "monthly_cost": round(monthly_cost, 2),
+
+            # optional extra info
+            "provider": resource.cloud_account.provider.name,
             "region": resource.region,
-            "state": resource.state,
-            "cost_per_hour": float(resource.cost_per_hour),
-            "model": resource.metadata.get("model"),
+            "cost_per_hour": float(resource.cost_per_hour or 0),
             "memory_gb": resource.metadata.get("memory_gb"),
             "attached_to": resource.metadata.get("attached_to"),
             "last_seen": resource.last_seen,
