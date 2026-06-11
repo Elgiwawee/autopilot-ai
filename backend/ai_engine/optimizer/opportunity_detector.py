@@ -250,10 +250,11 @@ class OpportunityDetector:
                 cloud_account=resource.cloud_account,
                 resource_id=resource.external_id,
                 action_type=action,
+            )
+            .exclude(
                 status__in=[
-                    "PLANNED",
-                    "APPROVED",
-                    "IN_PROGRESS",
+                    "COMPLETED",
+                    "SUPERSEDED",
                 ]
             )
             .order_by("-created_at")

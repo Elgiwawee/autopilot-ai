@@ -159,7 +159,7 @@ def execute_action(self, action_execution_id):
             ]
         )
 
-        optimization.status = "FAILED"
+        optimization.status = "PLANNED"
 
         optimization.save(
             update_fields=[

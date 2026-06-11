@@ -106,6 +106,7 @@ class CloudAccount(models.Model):
 
     def __str__(self):
         return f"{self.provider.display_name} - {self.account_identifier}"
+    
 class CloudResource(models.Model):
     RESOURCE_TYPES = (
         ("vm", "Virtual Machine"),
