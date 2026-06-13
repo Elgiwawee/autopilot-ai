@@ -12,16 +12,28 @@ import {
 export default function LineChart({ data, xKey, yKey }) {
   return (
     <div className="w-full h-64">
-      <ResponsiveContainer>
+      <ResponsiveContainer width="100%" height={320}>
         <ReLineChart data={data}>
-          <XAxis dataKey={xKey} stroke="#64748B" />
-          <YAxis stroke="#64748B" />
-          <Tooltip />
+          <CartesianGrid strokeDasharray="3 3" />
+
+          <XAxis
+            dataKey={xKey}
+            tick={{ fontSize: 12 }}
+          />
+
+          <YAxis
+            tickFormatter={(v) => `$${v}`}
+          />
+
+          <Tooltip
+            formatter={(v) => [`$${v}`, "Savings"]}
+          />
+
           <Line
             type="monotone"
             dataKey={yKey}
-            stroke="#2563EB"
-            strokeWidth={2}
+            strokeWidth={3}
+            dot={false}
           />
         </ReLineChart>
       </ResponsiveContainer>

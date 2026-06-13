@@ -22,17 +22,17 @@ class OverviewView(APIView):
     def get(self, request):
         organization = request.organization
 
-        cloud_slug = self._resolve_cloud_slug(
+        cloud_code = self._resolve_cloud_code(
             organization=organization,
             cloud_account_id=request.query_params.get("cloud_account"),
         )
 
-        if isinstance(cloud_slug, Response):
-            return cloud_slug  # early return if validation failed
+        if isinstance(cloud_code, Response):
+            return cloud_code  # early return if validation failed
 
         filters = OverviewFilters(
             organization=organization,
-            cloud=cloud_slug,
+            cloud=cloud_code,
             region=request.query_params.get("region"),
         )
 
@@ -42,7 +42,7 @@ class OverviewView(APIView):
     # Private helpers
     # ---------------------------------------------------------
 
-    def _resolve_cloud_slug(self, organization, cloud_account_id):
+    def _resolve_cloud_code(self, organization, cloud_account_id):
         """
         Validate cloud account and return provider slug.
         Returns Response if invalid.
@@ -68,4 +68,4 @@ class OverviewView(APIView):
                 status=404,
             )
 
-        return cloud_account.provider.slug
+        return cloud_account.provider.code

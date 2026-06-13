@@ -69,7 +69,11 @@ class AWSProvider(CloudProviderInterface):
                     "service": group["Keys"][0],
                     "resource_id": group["Keys"][1] or None,
                     "date": day["TimePeriod"]["Start"],
-                    "cost": float(group["Metrics"]["UnblendedCost"]["Amount"]),
+                    "cost": float(
+                        group["Metrics"]["UnblendedCost"]["Amount"]
+                    ),
+                    "currency": "USD",
+                    "region": "global",
                 })
 
         return records
