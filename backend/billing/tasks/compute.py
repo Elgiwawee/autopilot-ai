@@ -1,4 +1,4 @@
-# billing/task.py
+# billing/tasks/compute.py
 
 from celery import shared_task
 from django.db import models
@@ -64,6 +64,10 @@ def compute_savings(self, execution_id):
         },
     )
 
+     # 🚫 Prevent duplicate billing
+    if SavingsLedger.objects.filter(execution=execution).exists():
+        return
+
     ledger = SavingsLedger.objects.create(
         cloud_account=account,
         execution=execution,
@@ -77,7 +81,5 @@ def compute_savings(self, execution_id):
     # 💸 PLATFORM REVENUE (MANDATORY)
     create_revenue_share_from_ledger(ledger)
 
-    # 🚫 Prevent duplicate billing
-    if SavingsLedger.objects.filter(execution=execution).exists():
-        return
-
+   
+    
