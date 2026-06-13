@@ -3,6 +3,7 @@
 from celery import shared_task
 from datetime import date, timedelta
 
+from accounts.models import Organization
 from billing.models import CostSnapshot
 from cloud.providers.factory import get_provider
 from cloud.services.accounts import get_active_cloud_accounts
@@ -15,7 +16,9 @@ def sync_cloud_costs(org_id):
     and persist it into CostSnapshot.
     """
 
-    accounts = get_active_cloud_accounts(org_id)
+    organization = Organization.objects.get(id=org_id)
+
+    accounts = get_active_cloud_accounts(organization)
 
     end = date.today()
     start = end - timedelta(days=1)
