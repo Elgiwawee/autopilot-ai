@@ -12,11 +12,18 @@ PROVIDERS = {
 
 
 def get_provider(cloud_account):
-    provider_cls = PROVIDERS.get(cloud_account.provider)
+    provider = getattr(cloud_account, "provider", None)
 
-    if not provider_cls:
+    if provider is None:
+        raise ValueError("Cloud account has no provider.")
+
+    provider_code = getattr(provider, "code", "").lower()
+
+    provider_cls = PROVIDERS.get(provider_code)
+
+    if provider_cls is None:
         raise ValueError(
-            f"Unsupported cloud provider: {cloud_account.provider}"
+            f"Unsupported cloud provider code: {provider_code}"
         )
 
     return provider_cls(cloud_account)
