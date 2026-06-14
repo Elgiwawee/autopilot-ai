@@ -108,3 +108,9 @@ class AWSProvider(CloudProviderInterface):
             })
 
         return metrics
+    
+    def execute_action(self, action):
+        action.execute(self)
+
+    def rollback(self, action):
+        action.rollback(self)
