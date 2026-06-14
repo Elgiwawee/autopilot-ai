@@ -1,6 +1,6 @@
 # billing/services/trigger.py
 
-from billing.tasks import compute_savings
+from billing.tasks.compute import compute_savings
 
 
 def trigger_savings_computation(execution):
