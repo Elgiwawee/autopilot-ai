@@ -1,5 +1,3 @@
-# cloud/providers/factory.py
-
 from cloud.providers.aws import AWSProvider
 from cloud.providers.gcp import GCPProvider
 from cloud.providers.azure import AzureProvider
@@ -12,18 +10,23 @@ PROVIDERS = {
 
 
 def get_provider(cloud_account):
-    provider = getattr(cloud_account, "provider", None)
+    print("=== FACTORY DEBUG ===")
+    print("cloud_account:", cloud_account)
+    print("provider:", cloud_account.provider)
+    print("provider type:", type(cloud_account.provider))
 
-    if provider is None:
-        raise ValueError("Cloud account has no provider.")
+    provider_code = cloud_account.provider.code.lower()
 
-    provider_code = getattr(provider, "code", "").lower()
+    print("provider_code:", provider_code)
+    print("available:", PROVIDERS.keys())
 
     provider_cls = PROVIDERS.get(provider_code)
 
+    print("provider_cls:", provider_cls)
+
     if provider_cls is None:
         raise ValueError(
-            f"Unsupported cloud provider code: {provider_code}"
+            f"Unsupported provider code: {provider_code}"
         )
 
     return provider_cls(cloud_account)
