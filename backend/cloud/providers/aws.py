@@ -54,26 +54,61 @@ class AWSProvider(CloudProviderInterface):
                 "End": end_date.isoformat(),
             },
             Granularity="DAILY",
-            Metrics=["UnblendedCost"],
-            GroupBy=[
-                {"Type": "DIMENSION", "Key": "SERVICE"},
-                {"Type": "DIMENSION", "Key": "RESOURCE_ID"},
+            Metrics=[
+                "UnblendedCost",
+                "UsageQuantity",
             ],
+            GroupBy=[
+                {
+                    "Type": "DIMENSION",
+                    "Key": "SERVICE",
+                },
+                {
+                    "Type": "DIMENSION",
+                    "Key": "RESOURCE_ID",
+                },
+                {
+                    "Type": "DIMENSION",
+                    "Key": "REGION",
+                },
+            ]
         )
 
         records = []
 
         for day in response["ResultsByTime"]:
             for group in day["Groups"]:
+
+                cost = float(
+                    group["Metrics"]["UnblendedCost"]["Amount"]
+                )
+
+                usage = float(
+                    group["Metrics"]["UsageQuantity"]["Amount"]
+                )
+
                 records.append({
                     "service": group["Keys"][0],
-                    "resource_id": group["Keys"][1] or None,
-                    "date": day["TimePeriod"]["Start"],
-                    "cost": float(
-                        group["Metrics"]["UnblendedCost"]["Amount"]
+
+                    "resource_id": (
+                        group["Keys"][1]
+                        if group["Keys"][1]
+                        else None
                     ),
+
+                    "region": (
+                        group["Keys"][2]
+                        if len(group["Keys"]) > 2
+                        else "global"
+                    ),
+
+                    "date": day["TimePeriod"]["Start"],
+
+                    "cost": cost,
+
+                    "usage": usage,
+
                     "currency": "USD",
-                    "region": "global",
                 })
 
         return records
