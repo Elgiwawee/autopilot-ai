@@ -73,10 +73,6 @@ class AWSProvider(CloudProviderInterface):
                         "Type": "DIMENSION",
                         "Key": "RESOURCE_ID",
                     },
-                    {
-                        "Type": "DIMENSION",
-                        "Key": "REGION",
-                    },
                 ],
             }
 
@@ -115,12 +111,8 @@ class AWSProvider(CloudProviderInterface):
                         else None
                     )
 
-                    region = (
-                        group["Keys"][2]
-                        if len(group["Keys"]) > 2
-                        else "global"
-                    )
-
+                    region = "global"
+                    
                     records.append({
                         "service": service,
                         "resource_id": resource_id,

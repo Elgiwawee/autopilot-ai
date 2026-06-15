@@ -1,28 +1,62 @@
 #control_plane/services/billing_service.py
 
-from django.db.models import Avg
-from billing.models import Invoice
+from decimal import Decimal
+
+from django.db.models import Sum
+from django.utils.timezone import now
+
+from billing.models import CostSnapshot
 
 
 def build_billing_overview(organization):
-    invoices = (
-        Invoice.objects
-        .filter(organization=organization)
-        .order_by("-period")
+    qs = CostSnapshot.objects.filter(
+        cloud_account__organization=organization
     )
 
-    current = invoices.first()
-    last = invoices[1] if invoices.count() > 1 else None
+    today = now().date()
 
-    average = invoices.aggregate(
-        avg=Avg("platform_fee")
-    )["avg"] or 0
+    current_month = qs.filter(
+        date__year=today.year,
+        date__month=today.month,
+    )
 
-    forecast = float(average) * 1.05  # simple 5% projection
+    current_total = (
+        current_month.aggregate(
+            total=Sum("cost")
+        )["total"]
+        or Decimal("0")
+    )
+
+    previous_month = today.month - 1
+
+    previous_year = today.year
+
+    if previous_month == 0:
+        previous_month = 12
+        previous_year -= 1
+
+    last_total = (
+        qs.filter(
+            date__year=previous_year,
+            date__month=previous_month,
+        ).aggregate(
+            total=Sum("cost")
+        )["total"]
+        or Decimal("0")
+    )
+
+    average = (
+        qs.values("date")
+        .annotate(total=Sum("cost"))
+        .aggregate(avg=Sum("total"))["avg"]
+        or Decimal("0")
+    )
+
+    forecast = current_total * Decimal("1.05")
 
     return {
-        "current_month": current.platform_fee if current else 0,
-        "last_month": last.platform_fee if last else 0,
-        "average": round(float(average), 2),
-        "forecast": round(float(forecast), 2),
+        "current_month": float(current_total),
+        "last_month": float(last_total),
+        "average": float(average),
+        "forecast": float(forecast),
     }
