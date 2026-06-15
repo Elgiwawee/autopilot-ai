@@ -47,7 +47,12 @@ class CostSnapshot(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("cloud_account", "resource_id", "date")
+        unique_together = (
+            "cloud_account",
+            "service",
+            "region",
+            "date",
+        )
 
 
 
