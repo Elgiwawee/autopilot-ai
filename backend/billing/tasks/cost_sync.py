@@ -41,13 +41,19 @@ def sync_cloud_costs(org_id):
                     date=item["date"],
 
                     defaults={
-                        "provider": account.provider.code.upper(),
+                        "provider": account.provider.code,
                         "service": item.get("service", "UNKNOWN"),
                         "region": item.get("region", "global"),
                         "cost": item["cost"],
-                        "usage_quantity": item.get("usage", 0),
-                        "currency": item.get("currency", "USD"),
-                    },
+                        "usage_quantity": item.get(
+                            "usage_quantity",
+                            0,
+                        ),
+                        "currency": item.get(
+                            "currency",
+                            "USD",
+                        ),
+                    }
                 )
 
         except Exception as exc:

@@ -48,69 +48,94 @@ class AWSProvider(CloudProviderInterface):
     def fetch_costs(self, start_date: date, end_date: date):
         ce = self.session.client("ce")
 
-        response = ce.get_cost_and_usage(
-            TimePeriod={
-                "Start": start_date.isoformat(),
-                "End": end_date.isoformat(),
-            },
-            Granularity="DAILY",
-            Metrics=[
-                "UnblendedCost",
-                "UsageQuantity",
-            ],
-            GroupBy=[
-                {
-                    "Type": "DIMENSION",
-                    "Key": "SERVICE",
-                },
-                {
-                    "Type": "DIMENSION",
-                    "Key": "RESOURCE_ID",
-                },
-                {
-                    "Type": "DIMENSION",
-                    "Key": "REGION",
-                },
-            ]
-        )
-
         records = []
 
-        for day in response["ResultsByTime"]:
-            for group in day["Groups"]:
+        next_token = None
 
-                cost = float(
-                    group["Metrics"]["UnblendedCost"]["Amount"]
-                )
+        while True:
 
-                usage = float(
-                    group["Metrics"]["UsageQuantity"]["Amount"]
-                )
+            kwargs = {
+                "TimePeriod": {
+                    "Start": start_date.isoformat(),
+                    "End": end_date.isoformat(),
+                },
+                "Granularity": "DAILY",
+                "Metrics": [
+                    "UnblendedCost",
+                    "UsageQuantity",
+                ],
+                "GroupBy": [
+                    {
+                        "Type": "DIMENSION",
+                        "Key": "SERVICE",
+                    },
+                    {
+                        "Type": "DIMENSION",
+                        "Key": "RESOURCE_ID",
+                    },
+                    {
+                        "Type": "DIMENSION",
+                        "Key": "REGION",
+                    },
+                ],
+            }
 
-                records.append({
-                    "service": group["Keys"][0],
+            if next_token:
+                kwargs["NextPageToken"] = next_token
 
-                    "resource_id": (
+            response = ce.get_cost_and_usage(**kwargs)
+
+            for day in response["ResultsByTime"]:
+                for group in day["Groups"]:
+
+                    cost = float(
+                        group["Metrics"]["UnblendedCost"]["Amount"]
+                    )
+
+                    usage_metric = group["Metrics"].get(
+                        "UsageQuantity",
+                        {}
+                    )
+
+                    usage = float(
+                        usage_metric.get(
+                            "Amount",
+                            0
+                        )
+                    )
+                    currency = group["Metrics"][
+                        "UnblendedCost"
+                    ]["Unit"]
+
+                    service = group["Keys"][0]
+
+                    resource_id = (
                         group["Keys"][1]
-                        if group["Keys"][1]
+                        if len(group["Keys"]) > 1
                         else None
-                    ),
+                    )
 
-                    "region": (
+                    region = (
                         group["Keys"][2]
                         if len(group["Keys"]) > 2
                         else "global"
-                    ),
+                    )
 
-                    "date": day["TimePeriod"]["Start"],
+                    records.append({
+                        "service": service,
+                        "resource_id": resource_id,
+                        "date": day["TimePeriod"]["Start"],
+                        "cost": cost,
+                        "usage_quantity": usage,
+                        "currency": currency,
+                        "region": region,
+                    })
 
-                    "cost": cost,
+            next_token = response.get("NextPageToken")
 
-                    "usage": usage,
-
-                    "currency": "USD",
-                })
-
+            if not next_token:
+                break
+        
         return records
 
     def fetch_metrics(self, resource_ids, metric_name, start_date, end_date):
