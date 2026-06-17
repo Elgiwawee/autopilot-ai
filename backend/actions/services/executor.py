@@ -5,7 +5,6 @@ from django.db import transaction
 from accounts.models import GlobalSafety
 from actions.models import ExecutionPlan, ActionExecution
 from audit.services.writer import write_audit_log
-from actions.tasks import execute_action
 from control_plane.services.autopilot_guard import AutopilotGuard
 from ai_engine.reinforcement.policy import OptimizationPolicy
 
@@ -110,6 +109,8 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
             ),
         },
     )
+
+    from actions.tasks import execute_action
 
     execute_action.delay(execution.id)
 
