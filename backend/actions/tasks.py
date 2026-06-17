@@ -79,10 +79,11 @@ def execute_action(self, action_execution_id):
 
     action_type = getattr(plan, "action_type", None) or getattr(plan, "action", None)
 
-    resource_id = getattr(plan, "resource_id", None) or getattr(
-        plan,
-        "target_name",
-        None,
+    resource_id = (
+        getattr(plan, "provider_resource_id", None)
+        or getattr(plan, "resource_id", None)
+        or getattr(plan, "target_name", None)
+        or str(plan.id)
     )
 
     estimated_savings = getattr(

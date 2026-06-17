@@ -9,7 +9,6 @@ from ai_engine.models.autopilot_run import AutopilotRun
 from ai_engine.autopilot.learning import learn_from_outcome
 from cloud.services.infra import sync_cloud_account_resources
 from cloud.models import CloudResource
-from cloud.services import accounts
 from cloud.services.accounts import get_active_cloud_accounts
 from monitoring.services.metrics_collector import collect_metrics
 from cloud.services.gpu_metrics import get_gpu_utilization
@@ -23,7 +22,6 @@ from ai_engine.time_gate import within_maintenance_window
 from ai_engine.utilization import utilization_profile
 from ai_engine.policy_engine import evaluate_policy
 from ai_engine.policies import autopilot_policy_check
-from cloud.control_planes.factory import get_control_plane
 from control_plane.services.billing_guard import assert_billing_in_good_standing
 
 logger = logging.getLogger(__name__)
@@ -215,7 +213,7 @@ class AutopilotEngine:
                 cloud_account=plan.resource.cloud_account,
                 resource=plan.resource,
                 resource_type=plan.resource.resource_type,
-                resource_id=plan.resource.external_id,
+                provider_resource_id=plan.resource.external_id,
                 target_name=plan.resource.name or "",
                 action=plan.action_type,
                 parameters={},

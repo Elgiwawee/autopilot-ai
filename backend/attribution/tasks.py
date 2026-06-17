@@ -5,7 +5,7 @@ from actions.models import ActionExecution
 from attribution.services.engine import AttributionEngine
 from attribution.services.ledger import LedgerService
 from attribution.services.verifier import SavingsVerifier
-
+from billing.models import SavingsAttribution
 
 @shared_task(bind=True, max_retries=3)
 def process_execution_attribution(self, execution_id):
@@ -32,7 +32,12 @@ def process_execution_attribution(self, execution_id):
                 "optimization__cloud_account",
                 "optimization__cloud_account__organization",
                 "optimization__cloud_account__provider",
-            )
+
+                "plan",
+                "plan__cloud_account",
+                "plan__cloud_account__organization",
+                "plan__cloud_account__provider",
+            ) 
             .get(id=execution_id)
         )
 
@@ -44,7 +49,10 @@ def process_execution_attribution(self, execution_id):
         return
 
     # Prevent duplicate attribution
-    if hasattr(execution, "attribution"):
+
+    if SavingsAttribution.objects.filter(
+        execution=execution
+    ).exists():
         return
 
     # Verify execution is eligible

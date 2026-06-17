@@ -71,8 +71,18 @@ def make_decision(plan):
     # =========================================
     policy = OptimizationPolicy()
 
+    action = getattr(
+        plan,
+        "action_type",
+        None,
+    ) or getattr(
+        plan,
+        "action",
+        None,
+    )
+
     rl_allows = policy.should_execute(
-        action=plan.action_type,
+        action=action,
         risk_score=risk_score,
         estimated_savings = baseline or plan.estimated_monthly_savings or 0,
     )
@@ -122,7 +132,7 @@ def make_decision(plan):
         ),
     )
 
-    if plan.action_type == "use_spot_instance":
+    if action == "use_spot_instance":
         if not allow_spot(probability=0.03):
             decision.auto_execute_allowed = False
             decision.reason += " | Spot prediction rejected."

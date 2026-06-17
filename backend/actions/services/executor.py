@@ -25,7 +25,11 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
             organization=plan.cloud_account.organization,
             actor="AUTOPILOT",
             action=plan.action,
-            resource_id=plan.target_name,
+            resource_id=(
+                plan.target_name
+                or plan.provider_resource_id
+                or str(plan.id)
+            ),
             status="BLOCKED",
             metadata={
                 "cloud": plan.cloud_account.provider.code,
@@ -60,7 +64,11 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
             organization=plan.cloud_account.organization,
             actor=actor,
             action="EXECUTION_SKIPPED_BY_POLICY",
-            resource_id=str(plan.id),
+            resource_id=(
+                plan.target_name
+                or plan.provider_resource_id
+                or str(plan.id)
+            ),
             status="SKIPPED",
             metadata={
                 "risk_score": plan.risk_score,
@@ -99,7 +107,11 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
         organization=plan.cloud_account.organization,
         actor=actor,
         action=plan.action,
-        resource_id=plan.target_name,
+        resource_id=(
+            plan.target_name
+            or plan.provider_resource_id
+            or str(plan.id)
+        ),
         status="QUEUED",
         metadata={
             "confidence": plan.confidence,

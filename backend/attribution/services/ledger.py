@@ -1,3 +1,5 @@
+# attribution/services/ledger.py
+
 from decimal import Decimal
 
 from django.db import transaction
@@ -36,6 +38,31 @@ class LedgerService:
         actual_cost = result["actual_cost"]
         savings = result["realized_savings"]
 
+        provider_resource_id = (
+            getattr(
+                optimization,
+                "provider_resource_id",
+                None,
+            )
+            or getattr(
+                optimization,
+                "resource_id",
+                "",
+            )
+        )
+
+        confidence = getattr(
+            optimization,
+            "confidence",
+            1.0,
+        )
+
+        current_state = getattr(
+            optimization,
+            "current_state",
+            {},
+        ) or {}
+
         # --------------------------------------------------
         # Prevent duplicate processing
         # --------------------------------------------------
@@ -43,7 +70,6 @@ class LedgerService:
         if SavingsEvent.objects.filter(
             action_id=str(execution.id)
         ).exists():
-
             return
 
         # --------------------------------------------------
@@ -53,17 +79,13 @@ class LedgerService:
         savings_event = SavingsEvent.objects.create(
             organization=cloud_account.organization,
             cloud=cloud_account.provider.code,
-            resource_id=optimization.resource_id,
+            resource_id=provider_resource_id,
             baseline_cost=baseline_cost,
             actual_cost=actual_cost,
             savings_amount=savings,
             action_id=str(execution.id),
-            confidence=optimization.confidence,
-            region=(
-    		optimization.current_state.get("region", "")
-    		if optimization.current_state
-    		else ""
-		),
+            confidence=confidence,
+            region=current_state.get("region", ""),
         )
 
         # --------------------------------------------------
@@ -72,12 +94,12 @@ class LedgerService:
 
         attribution = SavingsAttribution.objects.create(
             execution=execution,
-            resource_id=optimization.resource_id,
+            resource_id=provider_resource_id,
             baseline_cost=baseline_cost,
             actual_cost=actual_cost,
             gross_savings=savings,
             net_savings=savings,
-            confidence=optimization.confidence,
+            confidence=confidence,
             explanation=(
                 "Autopilot realized savings attribution."
             ),
@@ -94,7 +116,7 @@ class LedgerService:
             currency="USD",
             period_start=result["date"],
             period_end=result["date"],
-            checksum=f"{execution.id}-{optimization.resource_id}",
+            checksum=f"{execution.id}-{provider_resource_id}",
         )
 
         # --------------------------------------------------
@@ -115,4 +137,3 @@ class LedgerService:
         )
 
         return ledger
-

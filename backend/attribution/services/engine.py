@@ -1,3 +1,5 @@
+# attribution/services/engine.py
+
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -20,13 +22,30 @@ class AttributionEngine:
     @classmethod
     def compute(cls, execution):
 
-        optimization = execution.optimization
+        optimization = execution.plan or execution.optimization
+
+        if optimization is None:
+            raise RuntimeError(
+                "Execution is not linked to a plan."
+            )
 
         cloud_account = optimization.cloud_account
 
-        resource_id = optimization.resource_id
+        resource_id = getattr(
+            optimization,
+            "provider_resource_id",
+            None,
+        ) or getattr(
+            optimization,
+            "resource_id",
+            None,
+        )
 
-        service = optimization.resource_type
+        service = getattr(
+            optimization,
+            "resource_type",
+            "",
+        )
 
         today = timezone.now().date()
 
@@ -61,7 +80,11 @@ class AttributionEngine:
             "baseline_cost": baseline_cost,
             "actual_cost": actual_cost,
             "realized_savings": realized_savings,
-            "confidence": optimization.confidence,
+            "confidence": getattr(
+                optimization,
+                "confidence",
+                1.0,
+            ),
             "date": today,
         }
 
