@@ -20,8 +20,24 @@ from actions.executors.aws_ec2 import (
     stop_ec2_instance,
 )
 
-from billing.services.savings_attribution import (
-    SavingsAttributionService,
+from billing.services.trigger import (
+    trigger_savings_computation,
+)
+
+from audit.services.writer import (
+    write_audit_log,
+)
+
+from accounts.models import (
+    GlobalSafety,
+)
+
+from control_plane.services.billing_guard import (
+    assert_billing_in_good_standing,
+)
+
+from ai_engine.reinforcement.trainer import (
+    RLTrainer,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,10 +70,71 @@ def execute_action(self, action_execution_id):
         id=action_execution_id
     )
 
-    optimization = execution.optimization
+    plan = execution.plan or execution.optimization
+
+    if plan is None:
+        raise RuntimeError(
+            "ActionExecution is not linked to any plan."
+        )
+
+    action_type = getattr(plan, "action_type", None) or getattr(plan, "action", None)
+
+    resource_id = getattr(plan, "resource_id", None) or getattr(
+        plan,
+        "target_name",
+        None,
+    )
+
+    estimated_savings = getattr(
+        plan,
+        "estimated_monthly_savings",
+        None,
+    )
+
+    if estimated_savings is None:
+        estimated_savings = getattr(
+            plan,
+            "estimated_savings",
+            0,
+        )
+
+    # ----------------------------------
+    # GLOBAL SAFETY SWITCH
+    # ----------------------------------
+
+    safety = GlobalSafety.objects.first()
+
+    if not safety or not safety.autopilot_enabled:
+
+        write_audit_log(
+            organization=plan.cloud_account.organization,
+            actor="AUTOPILOT",
+            action=action_type,
+            resource_id=resource_id,
+            status="BLOCKED",
+            metadata={
+                "reason": "Global safety disabled",
+            },
+        )
+
+        return
 
     execution.status = "executing"
     execution.save(update_fields=["status"])
+
+    write_audit_log(
+        organization=plan.cloud_account.organization,
+        actor="AUTOPILOT",
+        action=action_type,
+        resource_id=resource_id,
+        status="STARTED",
+        metadata={
+            "confidence": plan.confidence,
+            "estimated_savings": float(
+                estimated_savings
+            ),
+        },
+    )
 
     try:
 
@@ -65,30 +142,30 @@ def execute_action(self, action_execution_id):
         # INFORMATIONAL ONLY
         # ----------------------------------
 
-        if optimization.action_type == "RECOMMEND":
+        if action_type == "RECOMMEND":
 
             logger.info(
                 "Recommendation acknowledged: %s",
-                optimization.id,
+                plan.id,
             )
 
         # ----------------------------------
         # TERMINATE
         # ----------------------------------
 
-        elif optimization.action_type == "TERMINATE":
+        elif action_type == "TERMINATE":
 
             stop_ec2_instance(
-                instance_id=optimization.resource_id,
-                cloud_account=optimization.cloud_account,
-                region=optimization.current_state.get("region"),
+                instance_id=resource_id,
+                cloud_account=plan.cloud_account,
+                region=plan.current_state.get("region"),
             )
 
         # ----------------------------------
         # RIGHTSIZE
         # ----------------------------------
 
-        elif optimization.action_type == "RIGHTSIZE":
+        elif action_type == "RIGHTSIZE":
 
             raise NotImplementedError(
                 "RIGHTSIZE executor not implemented."
@@ -98,7 +175,7 @@ def execute_action(self, action_execution_id):
         # SPOT
         # ----------------------------------
 
-        elif optimization.action_type == "SPOT":
+        elif action_type == "SPOT":
 
             raise NotImplementedError(
                 "SPOT executor not implemented."
@@ -108,7 +185,7 @@ def execute_action(self, action_execution_id):
 
             raise ValueError(
                 f"Unknown action type: "
-                f"{optimization.action_type}"
+                f"{action_type}"
             )
 
         # ----------------------------------
@@ -125,28 +202,56 @@ def execute_action(self, action_execution_id):
             ]
         )
 
-        optimization.status = "COMPLETED"
+        plan.status = "COMPLETED"
 
-        optimization.save(
+        plan.save(
             update_fields=[
                 "status",
             ]
         )
 
+        write_audit_log(
+            organization=plan.cloud_account.organization,
+            actor="AUTOPILOT",
+            action=action_type,
+            resource_id=resource_id,
+            status="SUCCESS",
+            metadata={
+                "confidence": plan.confidence,
+                "estimated_savings": float(estimated_savings),
+            },
+        )
+
         # Only executable actions should
         # create savings attribution.
 
-        if optimization.action_type != "RECOMMEND":
+        if action_type != "RECOMMEND":
 
-            SavingsAttributionService.record(
+            trigger_savings_computation(
                 execution
             )
+
+            try:
+
+                RLTrainer().update(
+                    action_type
+                )
+
+            except Exception:
+
+                logger.exception(
+                    "RL training failed."
+                )
+           
+        assert_billing_in_good_standing(
+            plan.cloud_account.organization
+        )
 
     except Exception as exc:
 
         logger.exception(
             "Execution failed for optimization %s",
-            optimization.id,
+            plan.id,
         )
 
         execution.status = "failed"
@@ -159,12 +264,24 @@ def execute_action(self, action_execution_id):
             ]
         )
 
-        optimization.status = "PLANNED"
+        plan.status = "PLANNED"
 
-        optimization.save(
+        plan.save(
             update_fields=[
                 "status",
             ]
+        )
+
+
+        write_audit_log(
+            organization=plan.cloud_account.organization,
+            actor="AUTOPILOT",
+            action=action_type,
+            resource_id=resource_id,
+            status="FAILED",
+            metadata={
+                "error": str(exc),
+            },
         )
 
         raise

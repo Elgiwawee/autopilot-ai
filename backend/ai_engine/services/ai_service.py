@@ -55,7 +55,7 @@ class AIService:
 
         if cloud:
             qs = qs.filter(
-                resource__cloud_account__provider__slug=cloud
+                resource__cloud_account__provider__code=cloud
             )
 
         if region:
@@ -90,7 +90,7 @@ class AIService:
         if cloud:
             account = CloudAccount.objects.filter(
                 organization=organization,
-                provider__slug=cloud
+                provider__code=cloud
             ).first()
 
             if account and hasattr(account, "autopilotsettings"):

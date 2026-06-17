@@ -38,7 +38,6 @@ class AttributionEngine:
         actual_cost = (
             CostSnapshot.objects.filter(
                 cloud_account=cloud_account,
-                service=service,
                 resource_id=resource_id,
                 date=today,
             ).aggregate(

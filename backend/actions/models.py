@@ -34,23 +34,55 @@ class ActionExecution(models.Model):
     """
     What actually happened (or attempted).
     """
+
     STATUS = (
         ("planned", "Planned"),
+        ("pending", "Pending"),
         ("executing", "Executing"),
         ("success", "Success"),
         ("failed", "Failed"),
         ("rolled_back", "Rolled Back"),
     )
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+
+    # Legacy (keep temporarily)
     optimization = models.ForeignKey(
         "actions.OptimizationPlan",
         on_delete=models.CASCADE,
         related_name="executions",
+        null=True,
+        blank=True,
     )
-    status = models.CharField(max_length=16, choices=STATUS)
-    executed_at = models.DateTimeField(null=True, blank=True)
-    error_message = models.TextField(blank=True, null=True)
+
+    # New canonical relationship
+    plan = models.ForeignKey(
+        "actions.ExecutionPlan",
+        on_delete=models.CASCADE,
+        related_name="executions",
+        null=True,
+        blank=True,
+    )
+
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS,
+        default="planned",
+    )
+
+    executed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    error_message = models.TextField(
+        blank=True,
+        null=True,
+    )
 
 
 class ActionApproval(models.Model):
@@ -120,16 +152,21 @@ class EC2IdlePlanner:
             )
 
 class Decision(models.Model):
-    plan = models.OneToOneField(OptimizationPlan, on_delete=models.CASCADE)
+    plan = models.ForeignKey(
+        ActionPlan,
+        on_delete=models.CASCADE,
+    )
 
     risk_score = models.FloatField()
     risk_level = models.CharField(max_length=20)
 
     auto_execute_allowed = models.BooleanField()
+
     reason = models.TextField()
 
-    decided_at = models.DateTimeField(auto_now_add=True)
-
+    decided_at = models.DateTimeField(
+        auto_now_add=True,
+    )
 
 
 class ExecutionRecord(models.Model):
@@ -168,34 +205,117 @@ class ExecutionRecord(models.Model):
 
 
 class ExecutionPlan(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+        id = models.UUIDField(
+            primary_key=True,
+            default=uuid.uuid4,
+            editable=False,
+        )
 
-    cloud_account = models.ForeignKey("cloud.CloudAccount", on_delete=models.CASCADE)
-    cluster_id = models.CharField(max_length=128)
+        cloud_account = models.ForeignKey(
+            "cloud.CloudAccount",
+            on_delete=models.CASCADE,
+        )
 
-    target_type = models.CharField(max_length=32)  # Deployment, StatefulSet
-    namespace = models.CharField(max_length=64)
-    target_name = models.CharField(max_length=128)
+        # Optional direct link to the resource
+        resource = models.ForeignKey(
+            "cloud.CloudResource",
+            on_delete=models.CASCADE,
+            null=True,
+            blank=True,
+        )
 
-    action = models.CharField(max_length=64)  # resize_pod, scale_down, etc
-    parameters = models.JSONField()
+        # Generic resource information
+        resource_type = models.CharField(
+            max_length=64,
+            blank=True,
+            default="",
+        )
 
-    risk_score = models.FloatField()
-    confidence = models.FloatField()
+        resource_id = models.CharField(
+            max_length=255,
+            blank=True,
+            default="",
+        )
 
-    status = models.CharField(
-        max_length=32,
-        choices=[
-            ("planned", "Planned"),
-            ("canary", "Canary"),
-            ("committed", "Committed"),
-            ("rolled_back", "Rolled Back"),
-            ("failed", "Failed"),
-        ],
-        default="planned",
-    )
+        # Kubernetes support
+        cluster_id = models.CharField(
+            max_length=128,
+            blank=True,
+            default="",
+        )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+        namespace = models.CharField(
+            max_length=64,
+            blank=True,
+            default="",
+        )
+
+        target_name = models.CharField(
+            max_length=255,
+            blank=True,
+            default="",
+        )
+
+        # Action
+        action = models.CharField(
+            max_length=64,
+        )
+
+        parameters = models.JSONField(
+            default=dict,
+            blank=True,
+        )
+
+        # Before / after state
+        current_state = models.JSONField(
+            default=dict,
+            blank=True,
+        )
+
+        proposed_state = models.JSONField(
+            default=dict,
+            blank=True,
+        )
+
+        # AI outputs
+        estimated_monthly_savings = models.DecimalField(
+            max_digits=12,
+            decimal_places=2,
+            default=0,
+        )
+
+        confidence = models.FloatField(
+            default=0,
+        )
+
+        risk_score = models.FloatField(
+            default=0,
+        )
+
+        status = models.CharField(
+            max_length=32,
+            choices=[
+                ("planned", "Planned"),
+                ("queued", "Queued"),
+                ("executing", "Executing"),
+                ("canary", "Canary"),
+                ("committed", "Committed"),
+                ("rolled_back", "Rolled Back"),
+                ("failed", "Failed"),
+                ("skipped_policy", "Skipped By Policy"),
+            ],
+            default="planned",
+        )
+
+        created_at = models.DateTimeField(
+            auto_now_add=True,
+        )
+
+        class Meta:
+            ordering = ["-created_at"]
+
+        def __str__(self):
+            return f"{self.action} -> {self.target_name or self.resource_id}"
 
 
 

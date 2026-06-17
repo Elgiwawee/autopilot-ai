@@ -58,8 +58,9 @@ class CostSnapshot(models.Model):
 
 class SavingsAttribution(models.Model):
     execution = models.OneToOneField(
-        "actions.ExecutionRecord",
-        on_delete=models.CASCADE
+        "actions.ActionExecution",
+        on_delete=models.CASCADE,
+        related_name="attribution",
     )
 
     resource_id = models.CharField(max_length=255)

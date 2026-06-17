@@ -1,5 +1,3 @@
-# audit/services/writer.py
-
 from audit.models import AuditLog
 
 
@@ -8,16 +6,17 @@ def write_audit_log(
     organization,
     actor,
     action,
-    resource_id,
-    status,
+    resource_id=None,
+    status="SUCCESS",
     metadata=None,
 ):
     """
-    Immutable audit writer.
-    This is the ONLY place where audit logs are created.
+    Centralized audit writer.
+
+    Every execution should create logs through this function.
     """
 
-    AuditLog.objects.create(
+    return AuditLog.objects.create(
         organization=organization,
         actor=actor,
         action=action,

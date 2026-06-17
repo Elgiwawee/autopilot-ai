@@ -1,3 +1,5 @@
+# actions/plans/k8s_resize.py
+
 from actions.models import ActionPlan
 
 def generate_resize_plan(workload, new_cpu, new_mem):

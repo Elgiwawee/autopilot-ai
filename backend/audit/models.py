@@ -35,25 +35,36 @@ class AuditEvent(models.Model):
         ordering = ["created_at"]
 
 
-def save(self, *args, **kwargs):
-    if self.pk:
-        raise RuntimeError("AuditEvent is immutable and cannot be modified")
-    super().save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise RuntimeError("AuditEvent is immutable and cannot be modified")
+        super().save(*args, **kwargs)
 
 
 
 class AuditLog(models.Model):
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+    )
 
-    actor = models.CharField(max_length=255)
+    actor = models.CharField(max_length=100)
+
     action = models.CharField(max_length=100)
-    resource_id = models.CharField(max_length=128, null=True, blank=True)
-    cloud = models.CharField(max_length=20, null=True, blank=True)
 
-    status = models.CharField(max_length=20)
+    resource_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+    )
+
+    status = models.CharField(max_length=30)
+
     metadata = models.JSONField(default=dict)
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
 
     class Meta:
         ordering = ["-created_at"]

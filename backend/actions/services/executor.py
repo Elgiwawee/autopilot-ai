@@ -2,18 +2,13 @@
 
 import logging
 from django.db import transaction
-from actions.models import ActionExecution
 from accounts.models import GlobalSafety
-from actions.models import ExecutionPlan
+from actions.models import ExecutionPlan, ActionExecution
 from audit.services.writer import write_audit_log
-from cloud.executors.factory import get_cloud_executor
-from billing.services.trigger import trigger_savings_computation
+from actions.tasks import execute_action
 from control_plane.services.autopilot_guard import AutopilotGuard
 from ai_engine.reinforcement.policy import OptimizationPolicy
-from ai_engine.reinforcement.trainer import RLTrainer
-from control_plane.services.billing_guard import (
-    assert_billing_in_good_standing
-)
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,15 +23,15 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
     safety = GlobalSafety.objects.first()
     if not safety or not safety.autopilot_enabled:
         write_audit_log(
-            organization=plan.organization,
+            organization=plan.cloud_account.organization,
             actor="AUTOPILOT",
-            action=plan.action_type,
-            resource_id=str(plan.resource.id),
-            status=plan.status, #status="BLOCKED"
+            action=plan.action,
+            resource_id=plan.target_name,
+            status="BLOCKED",
             metadata={
-                "cloud": plan.resource.cloud_account.provider.code,
+                "cloud": plan.cloud_account.provider.code,
                 "risk_score": plan.risk_score,
-                "savings": plan.estimated_savings,
+                "savings": float(plan.estimated_monthly_savings),
             }
         )
         raise RuntimeError("Execution blocked by Global Safety switch")
@@ -79,73 +74,43 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
 
         return plan
 
-    # 5️⃣ RESOLVE CLOUD EXECUTOR (AWS / GCP / AZURE)
-    executor = get_cloud_executor(plan.cloud_account)
+   # -----------------------------------------
+    # Queue execution
+    # -----------------------------------------
 
-    # 6️⃣ EXECUTION
-    try:
-        executor.execute(
-            target_type=plan.resource.resource_type,
-            namespace=getattr(plan.resource, "namespace", None),
-            target_name=plan.resource.external_id,
-            action=plan.action,
-            parameters=plan.parameters,
-        )
-    except Exception as exc:
-        plan.status = "failed"
-        plan.save(update_fields=["status"])
-
-        write_audit_log(
-            organization=plan.cloud_account.organization,
-            actor=actor,
-            action=plan.action,
-            resource_id=plan.target_name,
-            status="FAILED",
-            metadata={
-                "cloud": plan.cloud_account.provider,
-                "error": str(exc),
-            },
-        )
-
-        logger.exception("Execution failed")
-        raise
-
-    # 7️⃣ COMMIT STATE
-    plan.status = "committed"
+    plan.status = "queued"
     plan.save(update_fields=["status"])
 
-    # 8️⃣ IMMUTABLE AUDIT LOG (NON-NEGOTIABLE)
+    kwargs = {
+        "status": "pending",
+    }
+
+    if isinstance(plan, ExecutionPlan):
+        kwargs["plan"] = plan
+    elif hasattr(plan, "action_type"):
+        kwargs["optimization"] = plan
+    else:
+        raise ValueError(
+            f"Unsupported plan type: {type(plan)}"
+        )
+
+    execution = ActionExecution.objects.create(**kwargs)
+    
     write_audit_log(
         organization=plan.cloud_account.organization,
         actor=actor,
         action=plan.action,
         resource_id=plan.target_name,
-        status="SUCCESS",
+        status="QUEUED",
         metadata={
-            "cloud": plan.cloud_account.provider,
             "confidence": plan.confidence,
             "risk_score": plan.risk_score,
+            "estimated_savings": float(
+                plan.estimated_monthly_savings
+            ),
         },
     )
 
-    # 9️⃣ BILLING SAFETY CHECK
-    assert_billing_in_good_standing(
-        plan.cloud_account.organization
-    )
+    execute_action.delay(execution.id)
 
-    execution = ActionExecution.objects.create(
-        action_plan=plan,
-        status="success",
-    )
-
-    trigger_savings_computation(execution) 
-
-    # =============================
-    # 🔥 RL TRAINING HOOK
-    # =============================
-    try:
-        RLTrainer().update(plan.action_type)
-    except Exception:
-        pass
-
-    return plan, execution
+    return execution

@@ -102,9 +102,13 @@ def make_decision(plan):
     # =========================================
     # 7️⃣ SAVE DECISION
     # =========================================
+    final_risk_score = (
+        risk_score + predicted_risk
+    ) / 2
+
     decision = Decision.objects.create(
         plan=plan,
-        risk_score=(compute_risk_score(cpu=cpu) + predicted_risk) / 2,
+        risk_score=final_risk_score,
         risk_level=risk_level,
         auto_execute_allowed=auto_execute,
         reason=(
@@ -119,8 +123,14 @@ def make_decision(plan):
     )
 
     if plan.action_type == "use_spot_instance":
-        spot_allowed = allow_spot(probability=0.03)  # replace with real prediction
-        if not spot_allowed:
-            return decision, utilization
+        if not allow_spot(probability=0.03):
+            decision.auto_execute_allowed = False
+            decision.reason += " | Spot prediction rejected."
+            decision.save(
+                update_fields=[
+                    "auto_execute_allowed",
+                    "reason",
+                ]
+            )
         
-    return decision, utilization
+    return decision

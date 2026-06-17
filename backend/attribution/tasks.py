@@ -4,34 +4,27 @@ from actions.models import ActionExecution
 
 from attribution.services.engine import AttributionEngine
 from attribution.services.ledger import LedgerService
+from attribution.services.verifier import SavingsVerifier
 
 
 @shared_task(bind=True, max_retries=3)
-def compute_savings(self, execution_id):
+def process_execution_attribution(self, execution_id):
     """
-    Compute realized savings after an optimization
-    has been executed.
-
-    Pipeline:
+    Runs the complete attribution pipeline.
 
         ActionExecution
+                │
+                ▼
+        SavingVerifier
                 │
                 ▼
         AttributionEngine
                 │
                 ▼
         LedgerService
-                │
-        ┌───────┼────────┐
-        ▼       ▼        ▼
-    SavingsEvent
-    SavingsAttribution
-    SavingsLedger
-    RevenueShare
     """
 
     try:
-
         execution = (
             ActionExecution.objects
             .select_related(
@@ -44,34 +37,22 @@ def compute_savings(self, execution_id):
         )
 
     except ActionExecution.DoesNotExist:
-
         return
 
-    # ---------------------------------------
-    # only successful executions generate
-    # realized savings
-    # ---------------------------------------
-
+    # Only successful executions generate savings
     if execution.status != "success":
-
         return
 
-    # ---------------------------------------
-    # already attributed?
-    # ---------------------------------------
-
+    # Prevent duplicate attribution
     if hasattr(execution, "attribution"):
-
         return
 
-    # ---------------------------------------
-    # compute savings
-    # ---------------------------------------
+    # Verify execution is eligible
+    if not SavingsVerifier.verify(execution):
+        return
 
+    # Compute savings
     result = AttributionEngine.compute(execution)
 
-    # ---------------------------------------
-    # persist
-    # ---------------------------------------
-
+    # Persist to database
     LedgerService.record(result)

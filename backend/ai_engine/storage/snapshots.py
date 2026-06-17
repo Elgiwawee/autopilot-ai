@@ -71,20 +71,21 @@ def snapshots_to_delete(snapshots):
 
 
 def generate_snapshot_delete_plan(snapshot):
-    """
-    Always manual approval.
-    """
-    estimated_savings = snapshot.size_gb * 0.05 * 24 * 30  # conservative
+
+    estimated_savings = (
+        snapshot.size_gb * 0.05 * 24 * 30
+    )
 
     return ActionPlan.objects.create(
         resource=snapshot.cloud_resource,
-        action_type="delete_snapshot",
+        action_type="DELETE_SNAPSHOT",
         estimated_savings=estimated_savings,
         risk_level="medium",
         is_safe=False,
         explanation=(
             "Snapshot exceeds retention policy "
-            "(daily=7, weekly=4, monthly=6)."
+            "(daily=7, weekly=4, monthly=6). "
+            "Manual approval required."
         ),
     )
 

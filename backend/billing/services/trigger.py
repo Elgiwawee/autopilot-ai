@@ -1,6 +1,6 @@
 # billing/services/trigger.py
 
-from billing.tasks.compute import compute_savings
+from attribution.tasks import process_execution_attribution
 
 
 def trigger_savings_computation(execution):
@@ -11,7 +11,7 @@ def trigger_savings_computation(execution):
     if not execution or not execution.id:
         return
 
-    compute_savings.apply_async(
+    process_execution_attribution.apply_async(
         args=[execution.id],
-        countdown=5,  # small delay to ensure DB consistency
+        countdown=5,
     )

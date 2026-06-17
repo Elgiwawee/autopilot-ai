@@ -1,5 +1,7 @@
+# actions/executors/ec2.py
+
 from django.utils.timezone import now
-from audit.models import AuditEvent
+from audit.services.writer import write_audit_log
 
 def execute_stop(execution, aws_client):
     execution.state = "EXECUTING"
@@ -22,16 +24,13 @@ def execute_stop(execution, aws_client):
 
 
 
-AuditEvent.objects.create(
-    cloud_account=execution.decision.plan.cloud_account,
-    actor="SYSTEM",
-    event_type="ACTION_EXECUTED",
-    resource_type="EC2",
-    resource_id=instance_id,
-    before_state=execution.before_state,
-    after_state=None,
-    metadata={
-        "execution_id": str(execution.id),
-        "risk_score": execution.decision.risk_score,
-    },
-)
+    write_audit_log(
+        organization=execution.optimization.cloud_account.organization,
+        actor="AUTOPILOT",
+        action=execution.optimization.action_type,
+        resource_id=execution.optimization.resource_id,
+        status="SUCCESS",
+        metadata={
+            "cloud": execution.optimization.cloud_account.provider.code,
+        },
+    )

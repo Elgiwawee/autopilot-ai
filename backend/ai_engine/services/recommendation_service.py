@@ -1,8 +1,9 @@
 # ai_engine/services/recommendation_service.py
 
 from cloud.models import CloudResource
-from ai_engine.planner import generate_action_plans
 from billing.models import CostSnapshot
+from actions.models import ActionPlan
+from ai_engine.planner import generate_action_plans
 
 
 def generate_recommendations(
@@ -11,72 +12,111 @@ def generate_recommendations(
     resources=None,
     gpu_usage=None,
 ):
+    """
+    Generate recommendation objects for a cloud account.
 
-    # ---------------------------------
-    # FALLBACK: LOAD RESOURCES
-    # ---------------------------------
+    Returns a list of ActionPlan instances.
+    """
+
     if resources is None:
         resources = CloudResource.objects.filter(
             cloud_account=account
         )
 
-    plans = []
+    recommendations = []
 
-    # ---------------------------------
-    # CORE + COST-AWARE AI
-    # ---------------------------------
     for resource in resources:
 
-        # ✅ Fetch last 7 days cost for THIS resource
-        costs = CostSnapshot.objects.filter(
-            cloud_account=account,
-            resource_id=resource.external_id
-        ).order_by("-date")[:7]
+        # -----------------------------------
+        # Existing planner modules
+        # -----------------------------------
+
+        recommendations.extend(
+            generate_action_plans(resource)
+        )
+
+        # -----------------------------------
+        # Cost-aware recommendation
+        # -----------------------------------
+
+        costs = (
+            CostSnapshot.objects
+            .filter(
+                cloud_account=account,
+                resource_id=resource.external_id,
+            )
+            .order_by("-date")[:7]
+        )
 
         avg_cost = (
             sum(float(c.cost) for c in costs) / len(costs)
             if costs else 0
         )
 
-        # 🔥 EXISTING PLANNER
-        plans.extend(generate_action_plans(resource))
+        if (
+            avg_cost > 50
+            and resource.state == "running"
+        ):
 
-        # ---------------------------------
-        # 💰 COST-BASED AI RULE (NEW)
-        # ---------------------------------
-        if avg_cost > 50 and resource.state == "running":
-            plans.append({
-                "type": "HIGH_COST_RESOURCE",
-                "resource": resource,
-                "reason": f"High avg daily cost: ${avg_cost:.2f}"
-            })
+            recommendations.append(
+                ActionPlan.objects.create(
+                    resource=resource,
+                    action_type="HIGH_COST_REVIEW",
+                    estimated_savings=avg_cost * 30,
+                    risk_level="low",
+                    is_safe=True,
+                    explanation=(
+                        f"Average daily cost "
+                        f"${avg_cost:.2f}. "
+                        "Recommend review for "
+                        "possible optimization."
+                    ),
+                )
+            )
 
-    # ---------------------------------
-    # 🔥 GPU AI MODULE (YOUR $$$ FEATURE)
-    # ---------------------------------
-    if gpu_usage:
-        for resource in resources:
+        # -----------------------------------
+        # GPU idle detection
+        # -----------------------------------
 
-            if resource.resource_type != "gpu":
-                continue
+        if (
+            gpu_usage
+            and resource.resource_type == "gpu"
+        ):
 
-            rid = resource.external_id
-            gpu_util = gpu_usage.get(rid, 0)
+            gpu_util = gpu_usage.get(
+                resource.external_id,
+                0,
+            )
 
             if gpu_util < 10:
-                plans.append({
-                    "type": "STOP_IDLE_GPU",
-                    "resource": resource,
-                    "reason": f"Low GPU utilization ({gpu_util:.2f}%)"
-                })
 
-    return plans
+                recommendations.append(
+                    ActionPlan.objects.create(
+                        resource=resource,
+                        action_type="STOP_IDLE_GPU",
+                        estimated_savings=avg_cost * 30,
+                        risk_level="medium",
+                        is_safe=False,
+                        explanation=(
+                            f"GPU utilization only "
+                            f"{gpu_util:.2f}%."
+                        ),
+                    )
+                )
 
-#plug in many AI modules later
+    return recommendations
+
+
 """
+Future AI modules:
+
 generate_idle_ec2_recommendations()
 generate_rightsize_ec2()
 generate_k8s_binpacking()
 generate_spot_rebalance()
 generate_gpu_idle_detection()
+generate_idle_rds_detection()
+generate_idle_nat_gateway_detection()
+generate_unused_elb_detection()
+generate_orphaned_ip_detection()
 """
