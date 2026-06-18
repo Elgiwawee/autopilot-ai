@@ -152,7 +152,7 @@ class EC2IdlePlanner:
             )
 
 class Decision(models.Model):
-    plan = models.ForeignKey(
+    plan = models.OneToOneField(
         ActionPlan,
         on_delete=models.CASCADE,
     )
