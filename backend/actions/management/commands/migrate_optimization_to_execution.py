@@ -1,35 +1,54 @@
+from django.core.management.base import BaseCommand
+
 from actions.models import (
     OptimizationPlan,
     ExecutionPlan,
 )
 
-for opt in OptimizationPlan.objects.all():
 
-    if ExecutionPlan.objects.filter(
-        legacy_optimization_id=opt.id
-    ).exists():
-        continue
+class Command(BaseCommand):
+    help = "Migrate OptimizationPlan records into ExecutionPlan"
 
-    ExecutionPlan.objects.create(
-        legacy_optimization_id=opt.id,
+    def handle(self, *args, **options):
+        created = 0
+        skipped = 0
 
-        cloud_account=opt.cloud_account,
+        for opt in OptimizationPlan.objects.all():
 
-        resource_type=opt.resource_type,
+            if ExecutionPlan.objects.filter(
+                legacy_optimization_id=opt.id
+            ).exists():
+                skipped += 1
+                continue
 
-        provider_resource_id=opt.resource_id,
+            ExecutionPlan.objects.create(
+                legacy_optimization_id=opt.id,
 
-        action=opt.action_type,
+                cloud_account=opt.cloud_account,
 
-        current_state=opt.current_state,
+                resource_type=opt.resource_type,
 
-        proposed_state=opt.proposed_state,
+                provider_resource_id=opt.resource_id,
 
-        estimated_monthly_savings=opt.estimated_monthly_savings,
+                action=opt.action_type.lower(),
 
-        confidence=opt.confidence,
+                current_state=opt.current_state,
 
-        status=opt.status.lower(),
+                proposed_state=opt.proposed_state,
 
-        created_at=opt.created_at,
-    )
+                estimated_monthly_savings=opt.estimated_monthly_savings,
+
+                confidence=opt.confidence,
+
+                status=opt.status.lower(),
+
+                created_at=opt.created_at,
+            )
+
+            created += 1
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Done. Created={created}, Skipped={skipped}"
+            )
+        )
