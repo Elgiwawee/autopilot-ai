@@ -50,14 +50,15 @@ def generate_resize_plan(resource):
 
     return ActionPlan.objects.create(
         resource=resource,
-        action_type="resize",
-        target_instance=target,
+        action_type="RIGHTSIZE",
         estimated_savings=estimated_savings,
         risk_level=risk_level.lower(),
         is_safe=True,
         explanation=(
-            f"CPU avg: {cpu:.1f}%, "
-            f"risk: {risk_level}. "
-            f"Resize {instance_type} → {target}."
+            f"CPU average {cpu:.1f}%, "
+            f"Memory average {memory:.1f}%, "
+            f"Risk={risk_level}. "
+            f"Recommend resize from "
+            f"{instance_type} -> {target}."
         ),
     )

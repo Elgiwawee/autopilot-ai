@@ -311,6 +311,12 @@ class ExecutionPlan(models.Model):
         auto_now_add=True,
     )
 
+    legacy_optimization_id = models.BigIntegerField(
+        null=True,
+        blank=True,
+        unique=True,
+    )
+
     class Meta:
         ordering = ["-created_at"]
 
