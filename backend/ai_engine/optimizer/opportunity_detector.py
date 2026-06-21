@@ -9,7 +9,7 @@ from ai_engine.storage.planner import generate_gp3_plan
 from ai_engine.storage.zombie import is_zombie, generate_delete_plan
 from ai_engine.storage.snapshots import analyze_snapshots
 from cloud.models import CloudResource
-from actions.models import OptimizationPlan
+from actions.models import ExecutionPlan
 from ai_engine.gpu.models import GPUMetric
 from ai_engine.gpu.features import extract_features
 from ai_engine.gpu.infer import gpu_decision
@@ -182,7 +182,7 @@ class OpportunityDetector:
                     )
                 )
 
-        for plan in OptimizationPlan.objects.filter(
+        for plan in ExecutionPlan.objects.filter(
             cloud_account=cloud_account,
             status__in=[
                 "PLANNED",
@@ -246,15 +246,16 @@ class OpportunityDetector:
         # ------------------------------------
 
         existing = (
-            OptimizationPlan.objects.filter(
+            ExecutionPlan.objects.filter(
                 cloud_account=resource.cloud_account,
-                resource_id=resource.external_id,
-                action_type=action,
+                provider_resource_id=resource.external_id,
+                action=action,
             )
             .exclude(
                 status__in=[
-                    "COMPLETED",
-                    "SUPERSEDED",
+                    "committed",
+                    "rolled_back",
+                    "failed",
                 ]
             )
             .order_by("-created_at")
@@ -283,16 +284,20 @@ class OpportunityDetector:
             return existing
 
         
-        plan = OptimizationPlan.objects.create(
+        plan = ExecutionPlan.objects.create(
             cloud_account=resource.cloud_account,
-            resource_id=resource.external_id,
+            resource=resource,
             resource_type=resource.resource_type.upper(),
-            action_type=action,
+            provider_resource_id=resource.external_id,
+            target_name=resource.name or "",
+            action=action,
+            parameters={},
             current_state=current_state,
             proposed_state=proposed_state,
             estimated_monthly_savings=savings,
             confidence=confidence,
-            status="PLANNED",
+            risk_score=0,
+            status="planned",
         )
 
         print(f"Created new optimization plan {plan.id}")

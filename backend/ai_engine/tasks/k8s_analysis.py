@@ -30,7 +30,9 @@ def analyze_k8s_resources(cluster_id):
             ExecutionPlan.objects.create(
                 resource=resource,
                 cloud_account=resource.cloud_account,
-                organization=resource.cloud_account.organization,
+                provider_resource_id=resource.external_id,
+                resource_type=resource.resource_type,
+                target_name=resource.name or "",
                 action=rec["type"],
                 confidence=rec["confidence"],
                 risk_score=rec["risk_score"],

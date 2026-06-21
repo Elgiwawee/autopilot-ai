@@ -1,3 +1,5 @@
+# billing/tasks/compute.py
+
 from celery import shared_task
 
 from actions.models import ActionExecution
@@ -39,6 +41,11 @@ def compute_savings(self, execution_id):
                 "optimization__cloud_account",
                 "optimization__cloud_account__organization",
                 "optimization__cloud_account__provider",
+
+                "plan",
+                "plan__cloud_account",
+                "plan__cloud_account__organization",
+                "plan__cloud_account__provider",
             )
             .get(id=execution_id)
         )

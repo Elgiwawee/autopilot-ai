@@ -9,12 +9,11 @@ class ActionService:
     def _base_queryset(organization):
         return (
             ActionExecution.objects.filter(
-                optimization__cloud_account__organization=organization
+                plan__cloud_account__organization=organization
             )
             .select_related(
-                "optimization",
-                "optimization__cloud_account",
-                "optimization__cloud_account__provider",
+                "plan",
+                "plan__cloud_account",
             )
         )
 
@@ -24,12 +23,12 @@ class ActionService:
 
         if cloud:
             qs = qs.filter(
-                optimization__cloud_account__provider__code=cloud
+                plan__cloud_account__provider__code=cloud
             )
 
         if region:
             qs = qs.filter(
-                optimization__cloud_account__region=region
+                plan__cloud_account__region=region
             )
 
         qs = qs.order_by("-executed_at")[:limit]
@@ -40,18 +39,18 @@ class ActionService:
                 "status": a.status,
                 "executed_at": a.executed_at,
                 "cloud": (
-                    a.optimization.cloud_account.provider.code
-                    if a.optimization
+                    a.plan.cloud_account.provider.code
+                    if a.plan
                     else None
                 ),
                 "resource_id": (
-                    a.optimization.resource_id
-                    if a.optimization
+                    a.plan.provider_resource_id
+                    if a.plan
                     else None
                 ),
                 "action_type": (
-                    a.optimization.action_type
-                    if a.optimization
+                    a.plan.action
+                    if a.plan
                     else None
                 ),
             }

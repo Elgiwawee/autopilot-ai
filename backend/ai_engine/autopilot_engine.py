@@ -157,7 +157,7 @@ class AutopilotEngine:
         # 1️⃣ DECISION ENGINE
         # =============================
         utilization = utilization_profile(plan.resource)
-        decision = make_decision(plan)
+        decision = make_decision(execution_plan)
 
         if not decision.auto_execute_allowed:
             logger.info(f"Plan {plan.id} blocked by decision engine")
@@ -167,8 +167,8 @@ class AutopilotEngine:
         # 2️⃣ ORG POLICY CHECK
         # =============================
         allowed, reason = evaluate_policy(
-            plan.resource,
-            plan.action_type
+            execution_plan.resource,
+            execution_plan.action,
         )
 
         if not allowed:
@@ -179,8 +179,8 @@ class AutopilotEngine:
         # 3️⃣ GLOBAL POLICY CHECK
         # =============================
         allowed, reason = autopilot_policy_check(
-            plan.resource,
-            plan.action_type
+            execution_plan.resource,
+            execution_plan.action,
         )
 
         if not allowed:
@@ -193,7 +193,7 @@ class AutopilotEngine:
         with transaction.atomic():
 
             status = AutopilotService.get_effective_status(
-                organization=plan.resource.cloud_account.organization,
+                organization=execution_plan.resource.cloud_account.organization,
                 cloud=plan.resource.cloud_account.provider.code,
             )
 

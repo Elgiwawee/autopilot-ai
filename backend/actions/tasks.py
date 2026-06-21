@@ -70,34 +70,22 @@ def execute_action(self, action_execution_id):
         id=action_execution_id
     )
 
-    plan = execution.plan or execution.optimization
+    plan = execution.plan 
 
     if plan is None:
         raise RuntimeError(
-            "ActionExecution is not linked to any plan."
+            "ActionExecution has no ExecutionPlan."
         )
 
-    action_type = getattr(plan, "action_type", None) or getattr(plan, "action", None)
+    action_type = plan.action
 
     resource_id = (
-        getattr(plan, "provider_resource_id", None)
-        or getattr(plan, "resource_id", None)
-        or getattr(plan, "target_name", None)
+        plan.provider_resource_id
+        or plan.target_name
         or str(plan.id)
     )
 
-    estimated_savings = getattr(
-        plan,
-        "estimated_monthly_savings",
-        None,
-    )
-
-    if estimated_savings is None:
-        estimated_savings = getattr(
-            plan,
-            "estimated_savings",
-            0,
-        )
+    estimated_savings = plan.estimated_monthly_savings
 
     # ----------------------------------
     # GLOBAL SAFETY SWITCH
@@ -122,6 +110,8 @@ def execute_action(self, action_execution_id):
 
     execution.status = "executing"
     execution.save(update_fields=["status"])
+    plan.status = "executing"
+    plan.save(update_fields=["status"])
 
     write_audit_log(
         organization=plan.cloud_account.organization,
@@ -203,7 +193,7 @@ def execute_action(self, action_execution_id):
             ]
         )
 
-        plan.status = "COMPLETED"
+        plan.status = "committed"
 
         plan.save(
             update_fields=[
@@ -265,7 +255,7 @@ def execute_action(self, action_execution_id):
             ]
         )
 
-        plan.status = "PLANNED"
+        plan.status = "failed"
 
         plan.save(
             update_fields=[

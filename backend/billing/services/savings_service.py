@@ -3,7 +3,7 @@
 from django.db.models import Sum, Count
 from django.utils.timezone import now
 from billing.models import SavingsEvent
-from actions.models import OptimizationPlan
+from actions.models import ExecutionPlan
 
 class SavingsService:
     """
@@ -60,9 +60,13 @@ class SavingsService:
         )
 
         potential = (
-            OptimizationPlan.objects.filter(
+            ExecutionPlan.objects.filter(
                 cloud_account__organization=organization,
-                status="PLANNED",
+                status__in=[
+                    "planned",
+                    "approved",
+                    "queued",
+                ],
             )
             .aggregate(
                 total=Sum("estimated_monthly_savings")

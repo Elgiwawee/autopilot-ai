@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from control_plane.permissions.member import IsOrganizationMember
 
 from actions.models import (
-    OptimizationPlan,
+    ExecutionPlan,
     ActionExecution,
 )
 
@@ -21,21 +21,21 @@ class ApplyOptimizationView(APIView):
     ]
 
     def post(self, request):
-        opt_id = request.data.get("id")
+        plan_id = request.data.get("id")
 
-        if not opt_id:
+        if not plan_id:
             return Response(
                 {"error": "Optimization ID required"},
                 status=400,
             )
 
         try:
-            opt = OptimizationPlan.objects.get(
-                id=opt_id,
+            plan = ExecutionPlan.objects.get(
+                id=plan_id,
                 cloud_account__organization=request.organization,
             )
 
-        except OptimizationPlan.DoesNotExist:
+        except ExecutionPlan.DoesNotExist:
             return Response(
                 {"error": "Optimization not found"},
                 status=404,
@@ -45,7 +45,7 @@ class ApplyOptimizationView(APIView):
         # RECOMMENDATIONS ARE INFORMATION ONLY
         # ---------------------------------------
 
-        if opt.action_type == "RECOMMEND":
+        if plan.action == "RECOMMEND":
             return Response(
                 {
                     "message": "This recommendation does not require execution."
@@ -57,12 +57,12 @@ class ApplyOptimizationView(APIView):
         # ---------------------------------------
 
         execution = ActionExecution.objects.create(
-            optimization=opt,
+            plan=plan,
             status="planned",
         )
 
-        opt.status = "IN_PROGRESS"
-        opt.save(update_fields=["status"])
+        plan.status = "queued"
+        plan.save(update_fields=["status"])
 
         execute_action.delay(str(execution.id))
 

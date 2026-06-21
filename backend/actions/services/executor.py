@@ -88,20 +88,10 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
     plan.status = "queued"
     plan.save(update_fields=["status"])
 
-    kwargs = {
-        "status": "pending",
-    }
-
-    if isinstance(plan, ExecutionPlan):
-        kwargs["plan"] = plan
-    elif hasattr(plan, "action_type"):
-        kwargs["optimization"] = plan
-    else:
-        raise ValueError(
-            f"Unsupported plan type: {type(plan)}"
-        )
-
-    execution = ActionExecution.objects.create(**kwargs)
+    execution = ActionExecution.objects.create(
+        plan=plan,
+        status="pending",
+    )
     
     write_audit_log(
         organization=plan.cloud_account.organization,

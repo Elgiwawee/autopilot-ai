@@ -71,15 +71,7 @@ def make_decision(plan):
     # =========================================
     policy = OptimizationPolicy()
 
-    action = getattr(
-        plan,
-        "action_type",
-        None,
-    ) or getattr(
-        plan,
-        "action",
-        None,
-    )
+    action = plan.action
 
     rl_allows = policy.should_execute(
         action=action,
@@ -100,9 +92,9 @@ def make_decision(plan):
     # 🔮 3️⃣ PRE-EXECUTION SIMULATION (NEW)
     # =========================================
     simulation = SimulationService().run(
-        action=plan.action_type,
-        resource_type=plan.resource.resource_type,
-        parameters={}
+        action=plan.action,
+        resource_type=plan.resource_type,
+        parameters=plan.parameters,
     )
 
     predicted_risk = simulation.predicted_risk
