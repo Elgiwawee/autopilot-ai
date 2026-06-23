@@ -20,13 +20,15 @@ export default function Savings() {
   useEffect(() => {
     const load = async () => {
       try {
-        const o = await getSavingsOverview();
-        const t = await getSavingsTrend();
-        const r = await getRecommendations();
+        const [o, t, r] = await Promise.all([
+          getSavingsOverview(),
+          getSavingsTrend(),
+          getRecommendations(),
+        ]);
 
         setOverview(o);
-        setTrend(t);
-        setRecs(r.recommendations || []);
+        setTrend(t || []);
+        setRecs(r?.recommendations || []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -38,7 +40,7 @@ export default function Savings() {
   }, []);
 
   const download = (fn, filename) => {
-    fn().then(res => {
+    fn().then((res) => {
       const url = window.URL.createObjectURL(res.data);
       const a = document.createElement("a");
       a.href = url;
@@ -53,7 +55,6 @@ export default function Savings() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Savings</h1>
 
-      {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card title="Total Saved">
           ${overview?.lifetime?.total_saved ?? 0}
@@ -72,37 +73,21 @@ export default function Savings() {
         </Card>
       </div>
 
-      {/* Trend */}
       <Card title="Savings Trend">
-        <LineChart data={trend} xKey="month" yKey="amount" />
+        <LineChart data={trend} xKey="date" yKey="cost" />
       </Card>
 
-      {/* Recommendations */}
       <Card title="Recommendations">
         <ul className="space-y-2">
-          {recs.map(r => (
+          {recs.map((r) => (
             <li key={r.id} className="border-b pb-2">
-              <p className="font-medium">
-                {r.title}
-              </p>
-
-              <p className="text-sm text-gray-500">
-                {r.description}
-              </p>
-
-              <p className="text-sm text-gray-500">
-                Cloud: {r.cloud}
-              </p>
-
-              <p className="text-sm text-gray-500">
-                {r.resource}
-              </p>
-
+              <p className="font-medium">{r.title}</p>
+              <p className="text-sm text-gray-500">{r.description}</p>
+              <p className="text-sm text-gray-500">Cloud: {r.cloud}</p>
+              <p className="text-sm text-gray-500">{r.resource}</p>
               <p className="text-sm">
-                Estimated saving:
-                <strong>${r.savings}</strong>
+                Estimated saving: <strong>${r.savings}</strong>
               </p>
-
               <p className="text-xs text-gray-400">
                 Confidence: {r.confidence} | Status: {r.status}
               </p>
@@ -111,7 +96,6 @@ export default function Savings() {
         </ul>
       </Card>
 
-      {/* Export */}
       <div className="flex gap-3">
         <button
           onClick={() => download(exportSavingsCSV, "savings.csv")}

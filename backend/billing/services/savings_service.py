@@ -1,18 +1,15 @@
 # billing/services/savings_service.py
-
 from django.db.models import Sum, Count
 from django.utils.timezone import now
+
 from billing.models import SavingsEvent
 from actions.models import ExecutionPlan
+
 
 class SavingsService:
     """
     Domain service responsible for savings calculations.
     """
-
-    # -------------------------------------------------------
-    # Base Query Builder
-    # -------------------------------------------------------
 
     @staticmethod
     def _base_queryset(organization):
@@ -20,10 +17,6 @@ class SavingsService:
             organization=organization,
             is_billable=True,
         )
-
-    # -------------------------------------------------------
-    # Public API
-    # -------------------------------------------------------
 
     @classmethod
     def summary(
@@ -34,17 +27,11 @@ class SavingsService:
     ):
         qs = cls._base_queryset(organization)
 
-        # Optional cloud filter (provider slug based)
         if cloud:
-            qs = qs.filter(
-                cloud=cloud
-            )
+            qs = qs.filter(cloud=cloud)
 
-        # Optional region filter (if relation exists)
         if region:
-            qs = qs.filter(
-                cloud_account__region=region
-            )
+            qs = qs.filter(region=region)
 
         current_month = now().date().replace(day=1)
 
@@ -64,8 +51,9 @@ class SavingsService:
                 cloud_account__organization=organization,
                 status__in=[
                     "planned",
-                    "approved",
                     "queued",
+                    "executing",
+                    "canary",
                 ],
             )
             .aggregate(
@@ -84,5 +72,3 @@ class SavingsService:
             },
             "potential_monthly_savings": float(potential),
         }
-    
-        

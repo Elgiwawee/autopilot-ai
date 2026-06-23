@@ -1,10 +1,10 @@
 # control_plane/services/savings_service.py
 
-from billing.services.savings_service import get_savings_summary
+from billing.services.savings_service import SavingsService
 
 
 def build_savings(organization):
     return {
         "organization": organization.id,
-        "summary": get_savings_summary(organization),
+        "summary": SavingsService.summary(organization),
     }

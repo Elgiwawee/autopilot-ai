@@ -10,10 +10,6 @@ from billing.services.trends_service import TrendService
 from actions.services.optimizer import list_optimizations
 
 
-# ------------------------------------------------------------
-# Savings Overview
-# ------------------------------------------------------------
-
 class SavingsOverviewView(APIView):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
@@ -21,11 +17,7 @@ class SavingsOverviewView(APIView):
         organization = request.organization
         cloud = request.query_params.get("cloud")
         region = request.query_params.get("region")
-        print(
-            "REQUEST ORG:",
-            request.organization.id,
-            request.organization.name,
-        )
+
         summary = SavingsService.summary(
             organization=organization,
             cloud=cloud,
@@ -34,10 +26,6 @@ class SavingsOverviewView(APIView):
 
         return Response(summary)
 
-
-# ------------------------------------------------------------
-# Savings Trend
-# ------------------------------------------------------------
 
 class SavingsTrendView(APIView):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
@@ -56,10 +44,6 @@ class SavingsTrendView(APIView):
 
         return Response(trend)
 
-
-# ------------------------------------------------------------
-# Savings Recommendations
-# ------------------------------------------------------------
 
 class SavingsRecommendationView(APIView):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
