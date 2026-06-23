@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from typing import Optional
-from actions.models import OptimizationPlan
+from actions.models import ExecutionPlan
 from accounts.services.autopilot_service import AutopilotService
 from ai_engine.services.ai_service import AIService
 from billing.services.savings_service import SavingsService
@@ -77,9 +77,13 @@ class OverviewService:
             organization=organization
         )
 
-        active = OptimizationPlan.objects.filter(
+        active = ExecutionPlan.objects.filter(
             cloud_account__organization=organization,
-            status="PLANNED",
+            status__in=[
+                "planned",
+                "queued",
+                "canary",
+            ],
         ).count()
 
         # ----------------------------

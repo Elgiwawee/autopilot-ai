@@ -1,5 +1,6 @@
-# ai_engine/optimizer/opportunity_detector.py
 from decimal import Decimal
+import logging
+
 from monitoring.services.metrics_collector import collect_metrics
 from ai_engine.optimizer.opportunity_rules import OpportunityRules
 from ai_engine.models.opportunity import OptimizationOpportunity
@@ -14,13 +15,15 @@ from ai_engine.gpu.models import GPUMetric
 from ai_engine.gpu.features import extract_features
 from ai_engine.gpu.infer import gpu_decision
 
+logger = logging.getLogger(__name__)
+
+
 class OpportunityDetector:
     """
     Uses real monitoring metrics to detect optimization opportunities.
     """
 
     def run(self, cloud_account):
-
         rules = OpportunityRules()
         builder = PlanBuilder()
 
@@ -28,7 +31,6 @@ class OpportunityDetector:
         # 1️⃣ METRICS-BASED DETECTION (EXISTING)
         # -----------------------------
         metrics = collect_metrics(cloud_account)
-
         opportunities = rules.detect_compute_opportunities(metrics)
 
         created_plans = []
@@ -60,17 +62,17 @@ class OpportunityDetector:
         # -----------------------------
         volumes = CloudResource.objects.filter(
             cloud_account=cloud_account,
-            resource_type="volume"
+            resource_type="volume",
         )
 
         snapshots = CloudResource.objects.filter(
             cloud_account=cloud_account,
-            resource_type="snapshot"
+            resource_type="snapshot",
         )
 
         storage_plans = self.detect_storage_opportunities(
             volumes=volumes,
-            snapshots=snapshots
+            snapshots=snapshots,
         )
 
         created_plans.extend(storage_plans)
@@ -78,20 +80,16 @@ class OpportunityDetector:
         # -----------------------------
         # GPU AI DETECTION
         # -----------------------------
-
-        self.detect_gpu_opportunities(
-            cloud_account
-        )
+        self.detect_gpu_opportunities(cloud_account)
 
         # -----------------------------
-        # 3️⃣ 🔥 FALLBACK EC2 DETECTION (NEW)
+        # 3️⃣ FALLBACK COMPUTE DETECTION
         # -----------------------------
-        self.detect_ec2_fallback(cloud_account)
+        self.detect_compute_fallback(cloud_account)
 
         return created_plans
-    
-    def detect_storage_opportunities(self, volumes, snapshots):
 
+    def detect_storage_opportunities(self, volumes, snapshots):
         plans = []
 
         # GP2 → GP3
@@ -109,11 +107,11 @@ class OpportunityDetector:
         plans.extend(snapshot_plans)
 
         return plans
-    
-    def detect_ec2_fallback(self, cloud_account):
+
+    def detect_compute_fallback(self, cloud_account):
         """
-        Fallback detection when metrics are missing
-        Uses CloudResource directly
+        Fallback detection when metrics are missing.
+        Uses CloudResource directly across compute providers.
         """
         generated = set()
         resources = CloudResource.objects.filter(
@@ -122,94 +120,82 @@ class OpportunityDetector:
         )
 
         for res in resources:
-
             monthly_cost = (res.cost_per_hour or 0) * 24 * 30
 
-            print(
-                f"Processing {res.external_id} "
-                f"state={res.state} "
-                f"cost={res.cost_per_hour}"
+            logger.info(
+                "Processing resource=%s state=%s cost_per_hour=%s",
+                res.external_id,
+                res.state,
+                res.cost_per_hour,
             )
 
             if res.state == "stopped":
-                print(f"Creating TERMINATE plan for {res.external_id}")
+                logger.info(
+                    "Creating TERMINATE plan for %s",
+                    res.external_id,
+                )
 
                 self.create_plan(
                     res,
                     "TERMINATE",
                     monthly_cost,
-                    0.95
+                    0.95,
                 )
 
-                generated.add(
-                    (
-                        res.external_id,
-                        "TERMINATE",
-                    )
-                )
+                generated.add((res.external_id, "TERMINATE"))
 
             elif res.cost_per_hour and res.cost_per_hour > Decimal("0.08"):
-                print(f"Creating RIGHTSIZE plan for {res.external_id}")
+                logger.info(
+                    "Creating RIGHTSIZE plan for %s",
+                    res.external_id,
+                )
 
                 self.create_plan(
                     res,
                     "RIGHTSIZE",
                     monthly_cost * Decimal("0.4"),
-                    0.8
+                    0.8,
                 )
 
-                generated.add(
-                    (
-                        res.external_id,
-                        "RIGHTSIZE",
-                    )
-                )
+                generated.add((res.external_id, "RIGHTSIZE"))
 
             else:
-                print(f"Creating RECOMMEND plan for {res.external_id}")
+                logger.info(
+                    "Creating RECOMMEND plan for %s",
+                    res.external_id,
+                )
 
                 self.create_plan(
                     res,
                     "RECOMMEND",
                     monthly_cost * Decimal("0.1"),
-                    0.6
+                    0.6,
                 )
 
-                generated.add(
-                    (
-                        res.external_id,
-                        "RECOMMEND",
-                    )
-                )
+                generated.add((res.external_id, "RECOMMEND"))
 
         for plan in ExecutionPlan.objects.filter(
             cloud_account=cloud_account,
             status__in=[
-                "PLANNED",
-                "APPROVED",
+                "planned",
+                "queued",
+                "executing",
             ],
         ):
             key = (
-                plan.resource_id,
-                plan.action_type,
+                plan.provider_resource_id,
+                plan.action,
             )
 
             if key not in generated:
-                plan.status = "SUPERSEDED"
+                plan.status = "rolled_back"
                 plan.save(update_fields=["status"])
 
     def create_plan(self, resource, action, savings, confidence):
         """
-        Create an OptimizationPlan from a discovered CloudResource.
+        Create an ExecutionPlan from a discovered CloudResource.
         Avoid duplicate ACTIVE plans while allowing future recommendations.
         """
-
-        print(
-            f"create_plan called: "
-            f"{resource.external_id} "
-            f"{action}"
-        )
-
 
         current_state = {
             "state": resource.state,
@@ -244,7 +230,6 @@ class OpportunityDetector:
         # ------------------------------------
         # Prevent duplicate ACTIVE plans only
         # ------------------------------------
-
         existing = (
             ExecutionPlan.objects.filter(
                 cloud_account=resource.cloud_account,
@@ -277,13 +262,13 @@ class OpportunityDetector:
                 ]
             )
 
-            print(
-                f"Updated existing optimization plan {existing.id}"
+            logger.info(
+                "Updated existing execution plan %s",
+                existing.id,
             )
 
             return existing
 
-        
         plan = ExecutionPlan.objects.create(
             cloud_account=resource.cloud_account,
             resource=resource,
@@ -300,10 +285,13 @@ class OpportunityDetector:
             status="planned",
         )
 
-        print(f"Created new optimization plan {plan.id}")
+        logger.info(
+            "Created new execution plan %s",
+            plan.id,
+        )
 
         return plan
-    
+
     def detect_gpu_opportunities(
         self,
         cloud_account,

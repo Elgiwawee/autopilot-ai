@@ -1,10 +1,10 @@
 # actions/services/optimizer.py
 
-from actions.models import OptimizationPlan
+from actions.models import ExecutionPlan
 
 
 def list_optimizations(organization, cloud=None, status=None):
-    qs = OptimizationPlan.objects.filter(
+    qs = ExecutionPlan.objects.filter(
         cloud_account__organization=organization
     )
 
@@ -13,7 +13,7 @@ def list_optimizations(organization, cloud=None, status=None):
 
     if cloud:
         qs = qs.filter(
-            cloud_account__provider=cloud
+            cloud_account__provider__code=cloud
         )
 
     qs = (
@@ -34,12 +34,15 @@ def list_optimizations(organization, cloud=None, status=None):
             # ✅ UI FRIENDLY
             "title": title,
             "description": description,
-            "resource": f"{opt.resource_type} ({opt.resource_id})",
+            "resource": (
+                f"{opt.resource_type} "
+                f"({opt.target_name or opt.provider_resource_id})"
+            ),
             "savings": float(opt.estimated_monthly_savings),
 
             # ✅ EXTRA DATA (future use)
             "cloud": opt.cloud_account.provider.code,
-            "action": opt.action_type,
+            "action": opt.action,
             "confidence": opt.confidence,
             "status": opt.status,
         })
@@ -52,11 +55,11 @@ def list_optimizations(organization, cloud=None, status=None):
 # -----------------------------
 
 def build_title(opt):
-    if opt.action_type == "TERMINATE":
+    if opt.action == "TERMINATE":
         return "Terminate idle resource"
-    elif opt.action_type == "RIGHTSIZE":
+    elif opt.action == "RIGHTSIZE":
         return "Rightsize resource"
-    elif opt.action_type == "SPOT":
+    elif opt.action == "SPOT":
         return "Switch to spot instance"
     return "Optimization recommendation"
 

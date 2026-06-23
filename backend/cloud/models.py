@@ -206,21 +206,53 @@ def recommend_gpu(gpu):
 
 
 class InstancePricing(models.Model):
-    provider = models.ForeignKey("CloudProvider", on_delete=models.CASCADE)
+    provider = models.ForeignKey(
+        "CloudProvider",
+        on_delete=models.CASCADE
+    )
 
-    instance_type = models.CharField(max_length=64)
-    region = models.CharField(max_length=64)
+    instance_type = models.CharField(
+        max_length=64
+    )
 
-    operating_system = models.CharField(max_length=32, default="linux")
+    region = models.CharField(
+        max_length=64
+    )
+
+    operating_system = models.CharField(
+        max_length=32,
+        default="linux"
+    )
+
     pricing_model = models.CharField(
         max_length=20,
-        choices=[("on_demand", "On-Demand"), ("spot", "Spot")],
+        choices=[
+            ("on_demand", "On-Demand"),
+            ("spot", "Spot"),
+        ],
         default="on_demand"
     )
 
-    price_per_hour = models.DecimalField(max_digits=10, decimal_places=6)
+    price_per_hour = models.DecimalField(
+        max_digits=10,
+        decimal_places=6
+    )
 
-    last_updated = models.DateTimeField(auto_now=True)
+    # NEW
+
+    source = models.CharField(
+        max_length=50,
+        default="api"
+    )
+
+    last_verified_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    last_updated = models.DateTimeField(
+        auto_now=True
+    )
 
     class Meta:
         unique_together = (

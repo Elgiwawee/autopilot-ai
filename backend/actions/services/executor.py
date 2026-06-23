@@ -1,15 +1,26 @@
 # actions/services/executor.py
 
 import logging
+
 from django.db import transaction
+
 from accounts.models import GlobalSafety
-from actions.models import ExecutionPlan, ActionExecution
+from actions.models import ActionExecution, ExecutionPlan
+from ai_engine.reinforcement.policy import OptimizationPolicy
 from audit.services.writer import write_audit_log
 from control_plane.services.autopilot_guard import AutopilotGuard
-from ai_engine.reinforcement.policy import OptimizationPolicy
-
 
 logger = logging.getLogger(__name__)
+
+
+def _plan_resource_label(plan: ExecutionPlan) -> str:
+    resource_name = getattr(plan.resource, "name", None) if plan.resource else None
+    return (
+        plan.target_name
+        or plan.provider_resource_id
+        or resource_name
+        or str(plan.id)
+    )
 
 
 @transaction.atomic
@@ -18,6 +29,8 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
     Execute a single execution plan with full safety, audit, and rollback awareness.
     """
 
+    resource_label = _plan_resource_label(plan)
+
     # 1️⃣ GLOBAL SAFETY (HARD KILL SWITCH)
     safety = GlobalSafety.objects.first()
     if not safety or not safety.autopilot_enabled:
@@ -25,17 +38,13 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
             organization=plan.cloud_account.organization,
             actor="AUTOPILOT",
             action=plan.action,
-            resource_id=(
-                plan.target_name
-                or plan.provider_resource_id
-                or str(plan.id)
-            ),
+            resource_id=resource_label,
             status="BLOCKED",
             metadata={
                 "cloud": plan.cloud_account.provider.code,
                 "risk_score": plan.risk_score,
                 "savings": float(plan.estimated_monthly_savings),
-            }
+            },
         )
         raise RuntimeError("Execution blocked by Global Safety switch")
 
@@ -50,7 +59,7 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
         action=plan.action,
     )
 
-    # 4️⃣ RL POLICY DECISION (AI decides if execution is worth it)
+    # 4️⃣ RL POLICY DECISION
     policy = OptimizationPolicy()
 
     should_execute = policy.should_execute(
@@ -64,11 +73,7 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
             organization=plan.cloud_account.organization,
             actor=actor,
             action="EXECUTION_SKIPPED_BY_POLICY",
-            resource_id=(
-                plan.target_name
-                or plan.provider_resource_id
-                or str(plan.id)
-            ),
+            resource_id=resource_label,
             status="SKIPPED",
             metadata={
                 "risk_score": plan.risk_score,
@@ -81,10 +86,7 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
 
         return plan
 
-   # -----------------------------------------
-    # Queue execution
-    # -----------------------------------------
-
+    # 5️⃣ QUEUE EXECUTION
     plan.status = "queued"
     plan.save(update_fields=["status"])
 
@@ -92,28 +94,22 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
         plan=plan,
         status="pending",
     )
-    
+
     write_audit_log(
         organization=plan.cloud_account.organization,
         actor=actor,
         action=plan.action,
-        resource_id=(
-            plan.target_name
-            or plan.provider_resource_id
-            or str(plan.id)
-        ),
+        resource_id=resource_label,
         status="QUEUED",
         metadata={
             "confidence": plan.confidence,
             "risk_score": plan.risk_score,
-            "estimated_savings": float(
-                plan.estimated_monthly_savings
-            ),
+            "estimated_savings": float(plan.estimated_monthly_savings),
         },
     )
 
     from actions.tasks import execute_action
 
-    execute_action.delay(execution.id)
+    transaction.on_commit(lambda: execute_action.delay(str(execution.id)))
 
     return execution

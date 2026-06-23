@@ -10,7 +10,7 @@ from ai_engine.autopilot_engine import AutopilotEngine
 def scan_cloud_for_opportunities(cloud_account_id):
     """
     Main AI pipeline:
-    1. Detect opportunities (creates OptimizationPlan)
+    1. Detect opportunities (create ExecutionPlan)
     2. Run autopilot (optional execution)
     """
 

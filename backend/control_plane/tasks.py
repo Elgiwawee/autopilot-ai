@@ -10,6 +10,8 @@ from cloud.models import CloudAccount
 
 from ai_engine.autopilot_engine import AutopilotEngine
 from cloud.collectors.aws_ec2 import collect_ec2_instances
+from cloud.collectors.azure_vm import collect_azure_instances
+from cloud.collectors.gcp_compute import collect_gcp_instances
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +73,12 @@ def discover_cloud_account(cloud_account_id):
         if account.provider.code == "aws":
 
             collect_ec2_instances(account.id)
+
+        elif account.provider.code == "azure":
+            collect_azure_instances(account.id)
+
+        elif account.provider.code == "gcp":
+            collect_gcp_instances(account.id)
 
         account.status = CloudAccount.STATUS_CONNECTED
         account.error_message = None

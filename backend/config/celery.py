@@ -67,4 +67,13 @@ app.conf.beat_schedule = {
         "schedule": 600,
     },
 
+    "refresh-pricing-catalog": {
+        "task": "cloud.tasks.pricing_sync.refresh_pricing_catalog",
+        "schedule": crontab(
+            hour=2,
+            minute=0,
+        ),
+    },
+
+
 }
