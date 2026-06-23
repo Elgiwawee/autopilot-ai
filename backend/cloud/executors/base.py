@@ -1,135 +1,35 @@
-# cloud/executors/aws.py
-
 from __future__ import annotations
 
+import json
 import logging
-from typing import Optional
+import os
+import tempfile
+import time
+from abc import ABC, abstractmethod
+from typing import Any, Optional
 
-import boto3
-from botocore.exceptions import BotoCoreError, ClientError
-
-from cloud.executors.base import CloudExecutor
+from cloud.models import CloudResource
 
 logger = logging.getLogger(__name__)
 
 
-class AWSExecutor(CloudExecutor):
+class CloudExecutor(ABC):
     """
-    AWS executor for EC2 and Kubernetes workloads.
+    Base executor for cloud/provider actions.
 
-    Supported actions:
-    - scale_deployment
-    - stop_vm / stop_instance
-    - start_vm / start_instance
-    - delete_vm / terminate_instance
-    - resize_vm / resize_instance
-    - reboot_vm / reboot_instance
+    Shared capabilities:
+    - Kubernetes deployment scaling
+    - Resource lookup by provider resource ID or target name
+    - Common timeouts / logging
     """
+
+    OPERATION_TIMEOUT_SECONDS = 900
+    POLL_INTERVAL_SECONDS = 5
 
     def __init__(self, cloud_account):
-        super().__init__(cloud_account)
-        self._session = None
+        self.cloud_account = cloud_account
 
-    def _aws_account(self):
-        return getattr(self.cloud_account, "aws", None)
-
-    def _session_or_default(self):
-        if self._session is not None:
-            return self._session
-
-        aws_account = self._aws_account()
-
-        if not aws_account or not getattr(aws_account, "role_arn", None):
-            self._session = boto3.Session()
-            return self._session
-
-        sts = boto3.client("sts")
-        assume_kwargs = {
-            "RoleArn": aws_account.role_arn,
-            "RoleSessionName": "autopilot-executor",
-        }
-
-        if getattr(aws_account, "external_id", None):
-            assume_kwargs["ExternalId"] = aws_account.external_id
-
-        assumed = sts.assume_role(**assume_kwargs)
-        creds = assumed["Credentials"]
-
-        self._session = boto3.Session(
-            aws_access_key_id=creds["AccessKeyId"],
-            aws_secret_access_key=creds["SecretAccessKey"],
-            aws_session_token=creds["SessionToken"],
-        )
-        return self._session
-
-    def _default_region(self):
-        aws_account = self._aws_account()
-        if aws_account and getattr(aws_account, "default_region", None):
-            return aws_account.default_region
-
-        resource = self._find_resource()
-        metadata = self._resource_metadata(resource)
-
-        region = (
-            metadata.get("region")
-            or metadata.get("availability_zone")
-            or getattr(self.cloud_account, "region", None)
-            or "us-east-1"
-        )
-
-        if isinstance(region, str) and len(region) > 2:
-            # Convert us-east-1a -> us-east-1 when an AZ is provided.
-            if region[-1].isalpha() and region[-2].isdigit():
-                return region[:-1]
-
-        return region
-
-    def _ec2_client(self, region=None):
-        session = self._session_or_default()
-        return session.client("ec2", region_name=region or self._default_region())
-
-    def _resolve_instance(self, target_name, parameters):
-        parameters = parameters or {}
-
-        resource = self._find_resource(
-            provider_resource_id=parameters.get("provider_resource_id")
-            or parameters.get("resource_id")
-            or parameters.get("instance_id"),
-            target_name=target_name,
-        )
-
-        instance_id = (
-            parameters.get("instance_id")
-            or parameters.get("resource_id")
-            or parameters.get("external_id")
-        )
-
-        if resource:
-            instance_id = resource.external_id or instance_id
-
-        if not instance_id:
-            raise ValueError("EC2 instance id is required")
-
-        region = (
-            parameters.get("region")
-            or parameters.get("availability_zone")
-            or parameters.get("zone")
-        )
-
-        if not region and resource:
-            metadata = self._resource_metadata(resource)
-            region = (
-                metadata.get("region")
-                or metadata.get("availability_zone")
-                or metadata.get("zone")
-            )
-
-        if region and len(region) > 2:
-            if region[-1].isalpha() and region[-2].isdigit():
-                region = region[:-1]
-
-        return resource, str(instance_id), region or self._default_region()
-
+    @abstractmethod
     def execute(
         self,
         *,
@@ -139,225 +39,198 @@ class AWSExecutor(CloudExecutor):
         action,
         parameters,
     ):
-        parameters = parameters or {}
-        action_key = (action or "").lower()
+        raise NotImplementedError
 
-        if action_key == "scale_deployment":
-            return self._scale_kubernetes_deployment(
-                namespace=namespace or parameters.get("namespace"),
-                target_name=target_name or parameters.get("name"),
-                replicas=parameters.get("replicas"),
-                parameters=parameters,
-            )
-
-        if action_key in {"stop_vm", "stop_instance"}:
-            return self._stop_instance(target_name=target_name, parameters=parameters)
-
-        if action_key in {"start_vm", "start_instance"}:
-            return self._start_instance(target_name=target_name, parameters=parameters)
-
-        if action_key in {"delete_vm", "terminate_instance", "terminate_vm"}:
-            return self._terminate_instance(target_name=target_name, parameters=parameters)
-
-        if action_key in {"resize_vm", "resize_instance"}:
-            return self._resize_instance(target_name=target_name, parameters=parameters)
-
-        if action_key in {"reboot_vm", "reboot_instance"}:
-            return self._reboot_instance(target_name=target_name, parameters=parameters)
-
-        raise ValueError(f"Unsupported AWS action: {action}")
-
-    def _stop_instance(self, *, target_name, parameters):
-        resource, instance_id, region = self._resolve_instance(target_name, parameters)
-        ec2 = self._ec2_client(region)
-
-        try:
-            ec2.stop_instances(InstanceIds=[instance_id])
-
-            waiter = ec2.get_waiter("instance_stopped")
-            waiter.wait(
-                InstanceIds=[instance_id],
-                WaiterConfig={
-                    "Delay": self.POLL_INTERVAL_SECONDS,
-                    "MaxAttempts": max(
-                        1,
-                        int(self.OPERATION_TIMEOUT_SECONDS / self.POLL_INTERVAL_SECONDS),
-                    ),
-                },
-            )
-
-            logger.info(
-                "AWS EC2 stopped instance %s in %s",
-                instance_id,
-                region,
-            )
-
-            return {
-                "provider": "aws",
-                "action": "stop_instance",
-                "instance_id": instance_id,
-                "region": region,
-                "status": "stopped",
-            }
-
-        except (ClientError, BotoCoreError) as exc:
-            logger.exception("AWS stop instance failed")
-            raise RuntimeError(f"Failed to stop EC2 instance {instance_id}: {exc}") from exc
-
-    def _start_instance(self, *, target_name, parameters):
-        resource, instance_id, region = self._resolve_instance(target_name, parameters)
-        ec2 = self._ec2_client(region)
-
-        try:
-            ec2.start_instances(InstanceIds=[instance_id])
-
-            waiter = ec2.get_waiter("instance_running")
-            waiter.wait(
-                InstanceIds=[instance_id],
-                WaiterConfig={
-                    "Delay": self.POLL_INTERVAL_SECONDS,
-                    "MaxAttempts": max(
-                        1,
-                        int(self.OPERATION_TIMEOUT_SECONDS / self.POLL_INTERVAL_SECONDS),
-                    ),
-                },
-            )
-
-            logger.info("AWS EC2 started instance %s in %s", instance_id, region)
-
-            return {
-                "provider": "aws",
-                "action": "start_instance",
-                "instance_id": instance_id,
-                "region": region,
-                "status": "running",
-            }
-
-        except (ClientError, BotoCoreError) as exc:
-            logger.exception("AWS start instance failed")
-            raise RuntimeError(f"Failed to start EC2 instance {instance_id}: {exc}") from exc
-
-    def _terminate_instance(self, *, target_name, parameters):
-        resource, instance_id, region = self._resolve_instance(target_name, parameters)
-        ec2 = self._ec2_client(region)
-
-        try:
-            ec2.terminate_instances(InstanceIds=[instance_id])
-
-            waiter = ec2.get_waiter("instance_terminated")
-            waiter.wait(
-                InstanceIds=[instance_id],
-                WaiterConfig={
-                    "Delay": self.POLL_INTERVAL_SECONDS,
-                    "MaxAttempts": max(
-                        1,
-                        int(self.OPERATION_TIMEOUT_SECONDS / self.POLL_INTERVAL_SECONDS),
-                    ),
-                },
-            )
-
-            logger.info(
-                "AWS EC2 terminated instance %s in %s",
-                instance_id,
-                region,
-            )
-
-            return {
-                "provider": "aws",
-                "action": "terminate_instance",
-                "instance_id": instance_id,
-                "region": region,
-                "status": "terminated",
-            }
-
-        except (ClientError, BotoCoreError) as exc:
-            logger.exception("AWS terminate instance failed")
-            raise RuntimeError(
-                f"Failed to terminate EC2 instance {instance_id}: {exc}"
-            ) from exc
-
-    def _resize_instance(self, *, target_name, parameters):
-        parameters = parameters or {}
-        new_instance_type = (
-            parameters.get("instance_type")
-            or parameters.get("target_instance_type")
-            or parameters.get("new_instance_type")
+    def rollback(self, *, action, parameters=None):
+        raise NotImplementedError(
+            f"Rollback not implemented for {self.__class__.__name__}"
         )
 
-        if not new_instance_type:
-            raise ValueError("instance_type is required for resize_vm")
+    def _find_resource(
+        self,
+        *,
+        provider_resource_id: Optional[str] = None,
+        target_name: Optional[str] = None,
+    ) -> Optional[CloudResource]:
+        qs = CloudResource.objects.filter(
+            cloud_account=self.cloud_account
+        )
 
-        resource, instance_id, region = self._resolve_instance(target_name, parameters)
-        ec2 = self._ec2_client(region)
+        if provider_resource_id:
+            resource = qs.filter(
+                external_id=str(provider_resource_id)
+            ).first()
+            if resource:
+                return resource
+
+        if target_name:
+            resource = qs.filter(name=target_name).first()
+            if resource:
+                return resource
+
+        return None
+
+    @staticmethod
+    def _resource_metadata(resource: Optional[CloudResource]) -> dict[str, Any]:
+        if not resource:
+            return {}
+
+        metadata = resource.metadata or {}
+        if isinstance(metadata, dict):
+            return metadata
+
+        return {}
+
+    def _kubernetes_apps_api(self, parameters=None):
+        """
+        Load Kubernetes API client.
+
+        Supports:
+        - kubeconfig string in parameters["kubeconfig"]
+        - kubeconfig dict in parameters["kubeconfig_dict"]
+        - kubeconfig file path in parameters["kubeconfig_path"]
+        - in-cluster config
+        - local kubeconfig fallback
+        """
+        parameters = parameters or {}
 
         try:
-            ec2.stop_instances(InstanceIds=[instance_id])
-            ec2.get_waiter("instance_stopped").wait(
-                InstanceIds=[instance_id],
-                WaiterConfig={
-                    "Delay": self.POLL_INTERVAL_SECONDS,
-                    "MaxAttempts": max(
-                        1,
-                        int(self.OPERATION_TIMEOUT_SECONDS / self.POLL_INTERVAL_SECONDS),
-                    ),
-                },
-            )
-
-            ec2.modify_instance_attribute(
-                InstanceId=instance_id,
-                InstanceType={"Value": new_instance_type},
-            )
-
-            ec2.start_instances(InstanceIds=[instance_id])
-            ec2.get_waiter("instance_running").wait(
-                InstanceIds=[instance_id],
-                WaiterConfig={
-                    "Delay": self.POLL_INTERVAL_SECONDS,
-                    "MaxAttempts": max(
-                        1,
-                        int(self.OPERATION_TIMEOUT_SECONDS / self.POLL_INTERVAL_SECONDS),
-                    ),
-                },
-            )
-
-            logger.info(
-                "AWS EC2 resized instance %s to %s",
-                instance_id,
-                new_instance_type,
-            )
-
-            return {
-                "provider": "aws",
-                "action": "resize_instance",
-                "instance_id": instance_id,
-                "region": region,
-                "instance_type": new_instance_type,
-                "status": "running",
-            }
-
-        except (ClientError, BotoCoreError) as exc:
-            logger.exception("AWS resize instance failed")
+            from kubernetes import client, config
+        except ImportError as exc:
             raise RuntimeError(
-                f"Failed to resize EC2 instance {instance_id}: {exc}"
+                "kubernetes package is required for scale_deployment actions."
             ) from exc
 
-    def _reboot_instance(self, *, target_name, parameters):
-        resource, instance_id, region = self._resolve_instance(target_name, parameters)
-        ec2 = self._ec2_client(region)
+        kubeconfig_path = parameters.get("kubeconfig_path")
+        kubeconfig = (
+            parameters.get("kubeconfig")
+            or parameters.get("kubeconfig_json")
+            or parameters.get("kubeconfig_dict")
+        )
+        kube_context = parameters.get("kube_context")
+
+        if kubeconfig_path:
+            config.load_kube_config(
+                config_file=kubeconfig_path,
+                context=kube_context,
+            )
+            return client.AppsV1Api()
+
+        if kubeconfig:
+            if isinstance(kubeconfig, dict):
+                payload = json.dumps(kubeconfig)
+            else:
+                payload = kubeconfig
+
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                suffix=".kubeconfig",
+                delete=False,
+            ) as handle:
+                handle.write(payload)
+                tmp_path = handle.name
+
+            try:
+                config.load_kube_config(
+                    config_file=tmp_path,
+                    context=kube_context,
+                )
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+
+            return client.AppsV1Api()
 
         try:
-            ec2.reboot_instances(InstanceIds=[instance_id])
+            config.load_incluster_config()
+        except Exception:
+            config.load_kube_config(context=kube_context)
 
-            logger.info("AWS EC2 rebooted instance %s in %s", instance_id, region)
+        return client.AppsV1Api()
 
-            return {
-                "provider": "aws",
-                "action": "reboot_instance",
-                "instance_id": instance_id,
-                "region": region,
-                "status": "rebooted",
-            }
+    def _scale_kubernetes_deployment(
+        self,
+        *,
+        namespace: str,
+        target_name: str,
+        replicas: int,
+        parameters=None,
+    ):
+        if not namespace:
+            raise ValueError("namespace is required for scale_deployment")
 
-        except (ClientError, BotoCoreError) as exc:
-            logger.exception("AWS reboot instance failed")
-            raise RuntimeError(f"Failed to reboot EC2 instance {instance_id}: {exc}") from exc
+        if not target_name:
+            raise ValueError("target_name is required for scale_deployment")
+
+        if replicas is None:
+            raise ValueError("replicas is required for scale_deployment")
+
+        replicas = int(replicas)
+        apps_api = self._kubernetes_apps_api(parameters=parameters)
+
+        body = {"spec": {"replicas": replicas}}
+
+        apps_api.patch_namespaced_deployment_scale(
+            name=target_name,
+            namespace=namespace,
+            body=body,
+        )
+
+        self._wait_for_kubernetes_scale(
+            apps_api=apps_api,
+            namespace=namespace,
+            target_name=target_name,
+            desired_replicas=replicas,
+        )
+
+        return {
+            "provider": getattr(self.cloud_account.provider, "code", None),
+            "action": "scale_deployment",
+            "namespace": namespace,
+            "target_name": target_name,
+            "replicas": replicas,
+            "status": "scaled",
+        }
+
+    def _wait_for_kubernetes_scale(
+        self,
+        *,
+        apps_api,
+        namespace: str,
+        target_name: str,
+        desired_replicas: int,
+    ):
+        deadline = time.monotonic() + self.OPERATION_TIMEOUT_SECONDS
+
+        while time.monotonic() < deadline:
+            scale = apps_api.read_namespaced_deployment_scale(
+                name=target_name,
+                namespace=namespace,
+            )
+
+            spec = getattr(scale, "spec", None)
+            status = getattr(scale, "status", None)
+
+            spec_replicas = getattr(spec, "replicas", None) if spec else None
+            current_replicas = getattr(status, "replicas", None) if status else None
+            ready_replicas = getattr(status, "ready_replicas", None) if status else None
+            available_replicas = getattr(status, "available_replicas", None) if status else None
+
+            if (
+                spec_replicas == desired_replicas
+                and (
+                    ready_replicas == desired_replicas
+                    or available_replicas == desired_replicas
+                    or current_replicas == desired_replicas
+                )
+            ):
+                return scale
+
+            time.sleep(self.POLL_INTERVAL_SECONDS)
+
+        raise TimeoutError(
+            f"Timed out waiting for deployment {namespace}/{target_name} "
+            f"to scale to {desired_replicas} replicas"
+        )
