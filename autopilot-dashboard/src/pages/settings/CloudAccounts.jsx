@@ -406,6 +406,24 @@ export default function CloudAccountsPage() {
     );
   }
 
+  function FieldStatus({ fieldKey, label }) {
+    const value = String(form[fieldKey] || "").trim();
+    const ok = Boolean(value);
+
+    return (
+      <div className="flex items-start gap-2 text-sm">
+        {ok ? (
+          <CircleCheckBig size={16} className="text-emerald-500 mt-0.5 shrink-0" />
+        ) : (
+          <CircleDashed size={16} className="text-muted mt-0.5 shrink-0" />
+        )}
+        <span className={ok ? "text-foreground" : "text-muted"}>
+          {label}
+        </span>
+      </div>
+    );
+  }
+
   function ProviderFields() {
     return (
       <AnimatePresence mode="wait">
