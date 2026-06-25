@@ -129,9 +129,14 @@ export default function Welcome() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="h-16 flex items-center justify-between gap-4">
             <Link to="/" className="flex items-center gap-3 group">
-              <div className="relative h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center overflow-hidden">
-                <span className="absolute inset-0 bg-primary/10 blur-xl opacity-0 group-hover:opacity-100 transition" />
-                <Cloud className="h-5 w-5 relative z-10" />
+              <div className="relative h-10 w-10 flex items-center justify-center overflow-hidden">
+                <span className="absolute inset-0 bg-primary/10 blur-xl opacity-0 group-hover:opacity-100 transition rounded-2xl" />
+
+                <img
+                  src="/icon.png"
+                  alt="Autopilot"
+                  className="relative z-10 h-11 w-11 object-contain transition-transform duration-300 group-hover:scale-105"
+                />
               </div>
               <div className="leading-tight">
                 <div className="font-semibold text-lg tracking-tight">Autopilot</div>
@@ -489,13 +494,13 @@ export default function Welcome() {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <Link
-                    to="/register"
+                    to="https://forms.gle/QU48zpmeqrzx3PHP6"
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3.5 text-sm font-medium text-primary-foreground shadow-xl shadow-primary/20 hover:-translate-y-0.5 transition"
                   >
                     Join beta <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link
-                    to="/settings/cloud-accounts"
+                    to="/register"
                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 py-3.5 text-sm font-medium hover:bg-muted/30 transition"
                   >
                     Connect cloud account

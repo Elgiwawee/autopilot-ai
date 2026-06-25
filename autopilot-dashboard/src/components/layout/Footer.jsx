@@ -27,20 +27,51 @@ export default function Footer() {
             <p className="text-sm text-gray-600 mb-3">Follow Us</p>
 
             <div className="flex gap-3">
-              {[FaLinkedinIn, FaXTwitter, FaYoutube, FaInstagram].map(
-                (Icon, i) => (
-                  <a
-                    key={i}
-                    href="#"
-                    className="w-9 h-9 flex items-center justify-center rounded-md 
-                               bg-gray-100 border border-gray-200
-                               hover:bg-primary hover:text-white
-                               transition duration-300"
-                  >
-                    <Icon size={14} />
-                  </a>
-                )
-              )}
+
+              <a
+                href="https://www.linkedin.com/company/autopilotops"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 flex items-center justify-center rounded-md
+                          bg-gray-100 border border-gray-200
+                          hover:bg-[#0A66C2] hover:text-white
+                          transition duration-300"
+              >
+                <FaLinkedinIn size={14} />
+              </a>
+
+              <a
+                href="https://x.com/autopilotopsai?s=11"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 flex items-center justify-center rounded-md
+                          bg-gray-100 border border-gray-200
+                          hover:bg-black hover:text-white
+                          transition duration-300"
+              >
+                <FaXTwitter size={14} />
+              </a>
+
+              <a
+                href="#"
+                className="w-9 h-9 flex items-center justify-center rounded-md
+                          bg-gray-100 border border-gray-200
+                          hover:bg-red-600 hover:text-white
+                          transition duration-300"
+              >
+                <FaYoutube size={14} />
+              </a>
+
+              <a
+                href="#"
+                className="w-9 h-9 flex items-center justify-center rounded-md
+                          bg-gray-100 border border-gray-200
+                          hover:bg-pink-600 hover:text-white
+                          transition duration-300"
+              >
+                <FaInstagram size={14} />
+              </a>
+
             </div>
           </div>
         </div>
