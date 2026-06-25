@@ -6,6 +6,8 @@ import AppLayout from "./components/layout/AppLayout";
 import Welcome from "./pages/Welcome";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import TermsOfUse from "./pages/TermsOfUse";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 // Protected pages
 import Overview from "./pages/Overview";
@@ -35,6 +37,8 @@ export default function AppRoutes() {
       <Route path="/" element={<Welcome />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/terms" element={<TermsOfUse />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
 
       {/* PROTECTED */}
       <Route element={<ProtectedRoute />}>

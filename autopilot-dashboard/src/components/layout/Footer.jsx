@@ -49,10 +49,10 @@ export default function Footer() {
         <div className="border-t border-gray-200 mt-8 pt-5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500">
 
           <div className="flex gap-5">
-            <a href="#" className="hover:text-gray-900 transition">
+            <a href="/privacy" className="hover:text-gray-900 transition">
               Privacy Policy
             </a>
-            <a href="#" className="hover:text-gray-900 transition">
+            <a href="/terms" className="hover:text-gray-900 transition">
               Terms Of Use
             </a>
           </div>
