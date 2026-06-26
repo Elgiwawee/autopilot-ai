@@ -695,7 +695,7 @@ export default function Welcome() {
                   </div>
                   <div className="lg:col-span-4 flex lg:justify-end gap-3 flex-col sm:flex-row lg:flex-col">
                     <Link
-                      to="/register"
+                      to="https://forms.gle/4HbeoPkHpREB7J1u9"
                       className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3.5 text-sm font-medium text-primary-foreground shadow-xl shadow-primary/20 hover:-translate-y-0.5 transition"
                     >
                       Apply for beta access <ArrowRight className="h-4 w-4" />
