@@ -20,8 +20,7 @@ from ai_engine.autopilot.safety import can_act
 from ai_engine.autopilot.rollback import rollback_if_needed
 from ai_engine.time_gate import within_maintenance_window
 from ai_engine.utilization import utilization_profile
-from ai_engine.policy_engine import evaluate_policy
-from ai_engine.policies import autopilot_policy_check
+from ai_engine.policy_engine import PolicyEngine
 from control_plane.services.billing_guard import assert_billing_in_good_standing
 
 logger = logging.getLogger(__name__)
@@ -157,7 +156,7 @@ class AutopilotEngine:
         # 1️⃣ DECISION ENGINE
         # =============================
         utilization = utilization_profile(plan.resource)
-        decision = make_decision(execution_plan)
+        decision = make_decision(plan)
 
         if not decision.auto_execute_allowed:
             logger.info(f"Plan {plan.id} blocked by decision engine")
@@ -166,26 +165,7 @@ class AutopilotEngine:
         # =============================
         # 2️⃣ ORG POLICY CHECK
         # =============================
-        allowed, reason = evaluate_policy(
-            execution_plan.resource,
-            execution_plan.action,
-        )
-
-        if not allowed:
-            logger.warning(f"Plan {plan.id} blocked (ORG): {reason}")
-            return
-
-        # =============================
-        # 3️⃣ GLOBAL POLICY CHECK
-        # =============================
-        allowed, reason = autopilot_policy_check(
-            execution_plan.resource,
-            execution_plan.action,
-        )
-
-        if not allowed:
-            logger.warning(f"Plan {plan.id} blocked (GLOBAL): {reason}")
-            return
+        # Policy evaluation now happens after creating the ExecutionPlan.
         
         # =============================
         # 4️⃣ SAFE EXECUTION (TRANSACTION)
@@ -193,7 +173,7 @@ class AutopilotEngine:
         with transaction.atomic():
 
             status = AutopilotService.get_effective_status(
-                organization=execution_plan.resource.cloud_account.organization,
+                organization=plan.resource.cloud_account.organization,
                 cloud=plan.resource.cloud_account.provider.code,
             )
 
@@ -201,10 +181,13 @@ class AutopilotEngine:
                 return
 
             if (
-                status["max_risk_allowed"] is not None and
-                decision.risk_score > status["max_risk_allowed"]
+                status["max_risk_allowed"] is not None
+                and decision.risk_score > status["max_risk_allowed"]
             ):
-                logger.warning(f"Plan {plan.id} skipped due to risk threshold")
+                logger.warning(
+                    "Plan %s skipped due to organization risk threshold.",
+                    plan.id,
+                )
                 return
 
             
@@ -228,6 +211,16 @@ class AutopilotEngine:
                 confidence=getattr(plan, "confidence", 1.0),
                 risk_score=decision.risk_score,
             )
+
+            policy = PolicyEngine.evaluate(execution_plan)
+
+            if not policy.allowed:
+                logger.warning(
+                    "ExecutionPlan %s blocked by policy: %s",
+                    execution_plan.id,
+                    policy.reason,
+                )
+                return
 
             execution = execute_plan(execution_plan)
 
