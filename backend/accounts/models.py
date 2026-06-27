@@ -122,9 +122,17 @@ class GCPAccount(models.Model):
 
 class AutopilotPolicy(models.Model):
     """
-    Organization-level safety rules.
+    Organization-level Autopilot safety policy.
+
+    Every AI optimization recommendation must pass through
+    this policy before execution.
     """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
 
     organization = models.OneToOneField(
         "accounts.Organization",
@@ -132,27 +140,107 @@ class AutopilotPolicy(models.Model):
         related_name="autopilot_policy",
     )
 
-    # Hard limits
-    max_monthly_savings_pct = models.FloatField(
-        default=30.0,
-        help_text="Maximum % of total spend that autopilot can optimize per month"
+    # ---------------------------------------------------
+    # MASTER CONTROL
+    # ---------------------------------------------------
+
+    enabled = models.BooleanField(
+        default=True,
+        help_text="Globally enable or disable Autopilot for this organization."
     )
 
-    allow_stop = models.BooleanField(default=False)
-    allow_resize = models.BooleanField(default=False)
+    enable_kill_switch = models.BooleanField(
+        default=False,
+        help_text="Immediately blocks every optimization action."
+    )
+
+    # ---------------------------------------------------
+    # EXECUTION MODE
+    # ---------------------------------------------------
+
+    DEFAULT_MODES = (
+        ("observe", "Observe"),
+        ("recommend", "Recommend"),
+        ("autopilot", "Autopilot"),
+    )
+
+    default_mode = models.CharField(
+        max_length=20,
+        choices=DEFAULT_MODES,
+        default="recommend",
+    )
+
+    # ---------------------------------------------------
+    # ALLOWED ACTIONS
+    # ---------------------------------------------------
+
+    allow_stop = models.BooleanField(default=True)
+
+    allow_resize = models.BooleanField(default=True)
+
     allow_delete = models.BooleanField(default=False)
 
-    # Blast radius
-    max_resources_per_day = models.IntegerField(default=3)
+    # ---------------------------------------------------
+    # SAFETY LIMITS
+    # ---------------------------------------------------
 
-    # Safety
-    require_approval = models.BooleanField(default=True)
-    enable_kill_switch = models.BooleanField(default=True)
+    require_approval = models.BooleanField(
+        default=True
+    )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    max_resources_per_day = models.PositiveIntegerField(
+        default=5
+    )
+
+    max_actions_per_hour = models.PositiveIntegerField(
+        default=10
+    )
+
+    # ---------------------------------------------------
+    # COST LIMITS
+    # ---------------------------------------------------
+
+    max_monthly_savings_pct = models.FloatField(
+        default=30.0,
+        help_text="Maximum percentage of monthly cloud spend Autopilot may optimize."
+    )
+
+    max_single_action_savings_pct = models.FloatField(
+        default=5.0,
+        help_text="Maximum percentage of total spend one action may save."
+    )
+
+    # ---------------------------------------------------
+    # EXECUTION WINDOWS
+    # ---------------------------------------------------
+
+    business_hours_only = models.BooleanField(
+        default=False
+    )
+
+    timezone = models.CharField(
+        max_length=100,
+        default="UTC"
+    )
+
+    # ---------------------------------------------------
+    # AUDITING
+    # ---------------------------------------------------
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        verbose_name = "Autopilot Policy"
+        verbose_name_plural = "Autopilot Policies"
 
     def __str__(self):
-        return f"Policy - {self.organization.name}"
+        return f"{self.organization.name} Autopilot Policy"
 
 
 class EBSVolume(models.Model):

@@ -4,17 +4,25 @@ import logging
 
 from django.db import transaction
 
-from accounts.models import GlobalSafety
-from actions.models import ActionExecution, ExecutionPlan
-from ai_engine.reinforcement.policy import OptimizationPolicy
+from actions.models import (
+    ActionExecution,
+    ExecutionPlan,
+)
+
 from audit.services.writer import write_audit_log
-from control_plane.services.autopilot_guard import AutopilotGuard
+
+from ai_engine.approval_engine import ApprovalEngine
 
 logger = logging.getLogger(__name__)
 
 
-def _plan_resource_label(plan: ExecutionPlan) -> str:
-    resource_name = getattr(plan.resource, "name", None) if plan.resource else None
+def _resource_label(plan: ExecutionPlan) -> str:
+    resource_name = (
+        getattr(plan.resource, "name", None)
+        if plan.resource
+        else None
+    )
+
     return (
         plan.target_name
         or plan.provider_resource_id
@@ -24,71 +32,71 @@ def _plan_resource_label(plan: ExecutionPlan) -> str:
 
 
 @transaction.atomic
-def execute_plan(plan: ExecutionPlan, actor="autopilot"):
+def execute_plan(
+    plan: ExecutionPlan,
+    actor="AUTOPILOT",
+):
     """
-    Execute a single execution plan with full safety, audit, and rollback awareness.
+    Enterprise execution orchestrator.
+
+    Responsibilities
+
+    • call ApprovalEngine
+    • create ActionExecution
+    • queue Celery worker
+
+    No policy decisions happen here.
     """
 
-    resource_label = _plan_resource_label(plan)
+    ########################################################
+    # Approval Engine
+    ########################################################
 
-    # 1️⃣ GLOBAL SAFETY (HARD KILL SWITCH)
-    safety = GlobalSafety.objects.first()
-    if not safety or not safety.autopilot_enabled:
-        write_audit_log(
-            organization=plan.cloud_account.organization,
-            actor="AUTOPILOT",
-            action=plan.action,
-            resource_id=resource_label,
-            status="BLOCKED",
-            metadata={
-                "cloud": plan.cloud_account.provider.code,
-                "risk_score": plan.risk_score,
-                "savings": float(plan.estimated_monthly_savings),
-            },
-        )
-        raise RuntimeError("Execution blocked by Global Safety switch")
+    decision = ApprovalEngine.process(plan)
 
-    # 2️⃣ STATE VALIDATION
-    if plan.status not in ["planned", "canary"]:
-        raise RuntimeError(f"Invalid execution state: {plan.status}")
+    ########################################################
+    # Blocked
+    ########################################################
 
-    # 3️⃣ ORGANIZATION / ACCOUNT SAFETY POLICY
-    AutopilotGuard.validate_account_access(
-        cloud_account=plan.cloud_account,
-        risk_score=plan.risk_score,
-        action=plan.action,
-    )
+    if not decision.allowed:
 
-    # 4️⃣ RL POLICY DECISION
-    policy = OptimizationPolicy()
-
-    should_execute = policy.should_execute(
-        action=plan.action,
-        risk_score=plan.risk_score,
-        estimated_savings=plan.estimated_monthly_savings,
-    )
-
-    if not should_execute:
         write_audit_log(
             organization=plan.cloud_account.organization,
             actor=actor,
-            action="EXECUTION_SKIPPED_BY_POLICY",
-            resource_id=resource_label,
-            status="SKIPPED",
+            action="POLICY_BLOCKED",
+            resource_id=_resource_label(plan),
+            status="BLOCKED",
             metadata={
-                "risk_score": plan.risk_score,
-                "estimated_savings": float(plan.estimated_monthly_savings),
+                "reason": decision.reason,
+                "risk_level": decision.risk_level,
             },
         )
 
-        plan.status = "skipped_policy"
-        plan.save(update_fields=["status"])
+        return None
 
-        return plan
+    ########################################################
+    # Waiting for manual approval
+    ########################################################
 
-    # 5️⃣ QUEUE EXECUTION
-    plan.status = "queued"
-    plan.save(update_fields=["status"])
+    if decision.requires_approval:
+
+        write_audit_log(
+            organization=plan.cloud_account.organization,
+            actor=actor,
+            action="WAITING_APPROVAL",
+            resource_id=_resource_label(plan),
+            status="PENDING_APPROVAL",
+            metadata={
+                "reason": decision.reason,
+                "risk_level": decision.risk_level,
+            },
+        )
+
+        return None
+
+    ########################################################
+    # Queue execution
+    ########################################################
 
     execution = ActionExecution.objects.create(
         plan=plan,
@@ -99,17 +107,27 @@ def execute_plan(plan: ExecutionPlan, actor="autopilot"):
         organization=plan.cloud_account.organization,
         actor=actor,
         action=plan.action,
-        resource_id=resource_label,
+        resource_id=_resource_label(plan),
         status="QUEUED",
         metadata={
+            "plan_id": str(plan.id),
             "confidence": plan.confidence,
             "risk_score": plan.risk_score,
-            "estimated_savings": float(plan.estimated_monthly_savings),
+            "estimated_monthly_savings": float(
+                plan.estimated_monthly_savings
+            ),
         },
     )
 
-    from actions.tasks import execute_action
-
-    transaction.on_commit(lambda: execute_action.delay(str(execution.id)))
+    transaction.on_commit(
+        lambda: __queue_execution(execution)
+    )
 
     return execution
+
+
+def __queue_execution(execution):
+
+    from actions.tasks import execute_action
+
+    execute_action.delay(str(execution.id))

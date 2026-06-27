@@ -1,119 +1,210 @@
-// src/pages/Policies.jsx
-
 import { useEffect, useState } from "react";
-import { getPolicy, updatePolicy } from "../api/policies.api";
-import Card from "../components/ui/Card";
-import Spinner from "../components/ui/Spinner";
 import toast from "react-hot-toast";
+
+import { getPolicy, updatePolicy } from "../api/policies.api";
+
+import Spinner from "../components/ui/Spinner";
+
+import PolicySection from "../components/policies/PolicySection";
+import PolicySwitch from "../components/policies/PolicySwitch";
+import PolicySlider from "../components/policies/PolicySlider";
+import PolicyNumberInput from "../components/policies/PolicyNumberInput";
 
 export default function Policies() {
   const [policy, setPolicy] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    getPolicy()
-      .then(setPolicy)
-      .finally(() => setLoading(false));
+    loadPolicy();
   }, []);
 
-  const handleChange = async (field, value) => {
-    const updated = { ...policy, [field]: value };
-    setPolicy(updated);
+  async function loadPolicy() {
+    try {
+      const data = await getPolicy();
+      setPolicy(data);
+    } catch {
+      toast.error("Unable to load policy");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function save(changes) {
+    setSaving(true);
 
     try {
-      await updatePolicy({ [field]: value });
-      toast.success("Policy updated successfully");
+      const updated = await updatePolicy(changes);
+
+      setPolicy(updated);
+
+      toast.success("Policy updated");
     } catch (err) {
       console.error(err);
       toast.error("Failed to update policy");
+    } finally {
+      setSaving(false);
     }
-  };
+  }
+
+  async function handleChange(field, value) {
+    setPolicy((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    await save({
+      [field]: value,
+    });
+  }
 
   if (loading) return <Spinner />;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Autopilot Policy</h1>
+    <div className="max-w-6xl mx-auto space-y-8">
 
-      {/* Optimization Limits */}
-      <Card title="Optimization Limits">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium">
-              Max Monthly Savings (%)
-            </label>
-            <input
-              type="number"
-              value={policy.max_monthly_savings_pct}
-              onChange={(e) =>
-                handleChange("max_monthly_savings_pct", Number(e.target.value))
-              }
-              className="border p-2 rounded w-full"
-            />
-          </div>
+      <div className="flex items-center justify-between">
+
+        <div>
+          <h1 className="text-3xl font-semibold">
+            Autopilot Policies
+          </h1>
+
+          <p className="text-muted-foreground mt-2">
+            Configure how Autopilot is allowed to optimize your cloud
+            infrastructure.
+          </p>
         </div>
-      </Card>
 
-      {/* Allowed Actions */}
-      <Card title="Allowed Actions">
-        <div className="space-y-3">
-          {[
-            ["allow_stop", "Allow Stop Instances"],
-            ["allow_resize", "Allow Resize Resources"],
-            ["allow_delete", "Allow Delete Resources"],
-          ].map(([field, label]) => (
-            <div key={field} className="flex items-center justify-between">
-              <span>{label}</span>
-              <input
-                type="checkbox"
-                checked={policy[field]}
-                onChange={(e) => handleChange(field, e.target.checked)}
-              />
-            </div>
-          ))}
+        <div className="text-sm text-muted-foreground">
+          {saving ? "Saving..." : "All changes saved"}
         </div>
-      </Card>
 
-      {/* Safety Controls */}
-      <Card title="Safety Controls">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium">
-              Max Resources Per Day
-            </label>
-            <input
-              type="number"
-              value={policy.max_resources_per_day}
-              onChange={(e) =>
-                handleChange("max_resources_per_day", Number(e.target.value))
-              }
-              className="border p-2 rounded w-full"
-            />
-          </div>
+      </div>
 
-          <div className="flex items-center justify-between">
-            <span>Require Approval</span>
-            <input
-              type="checkbox"
-              checked={policy.require_approval}
-              onChange={(e) =>
-                handleChange("require_approval", e.target.checked)
-              }
-            />
-          </div>
+      {/* ------------------------------------------------ */}
 
-          <div className="flex items-center justify-between">
-            <span>Enable Kill Switch</span>
-            <input
-              type="checkbox"
-              checked={policy.enable_kill_switch}
-              onChange={(e) =>
-                handleChange("enable_kill_switch", e.target.checked)
-              }
-            />
-          </div>
-        </div>
-      </Card>
+      <PolicySection
+        title="Execution Mode"
+        description="Choose how Autopilot behaves when recommendations are generated."
+      >
+
+        <PolicySwitch
+          label="Require Approval"
+          description="Every optimization must be approved before execution."
+          checked={policy.require_approval}
+          onChange={(v) => handleChange("require_approval", v)}
+        />
+
+        <PolicySwitch
+          label="Kill Switch"
+          description="Immediately stop all automated actions."
+          checked={policy.enable_kill_switch}
+          onChange={(v) => handleChange("enable_kill_switch", v)}
+        />
+
+      </PolicySection>
+
+      {/* ------------------------------------------------ */}
+
+      <PolicySection
+        title="Financial Guardrails"
+        description="Prevent Autopilot from making excessive cost changes."
+      >
+
+        <PolicySlider
+          label="Maximum Monthly Savings"
+          description="Maximum percentage of cloud spend Autopilot may optimize."
+          value={policy.max_monthly_savings_pct}
+          min={1}
+          max={100}
+          suffix="%"
+          onChange={(v) =>
+            handleChange("max_monthly_savings_pct", v)
+          }
+        />
+
+      </PolicySection>
+
+      {/* ------------------------------------------------ */}
+
+      <PolicySection
+        title="Execution Limits"
+        description="Limit the number of resources Autopilot may modify."
+      >
+
+        <PolicyNumberInput
+          label="Maximum Resources Per Day"
+          description="Limits execution blast radius."
+          value={policy.max_resources_per_day}
+          min={1}
+          onChange={(v) =>
+            handleChange("max_resources_per_day", v)
+          }
+        />
+
+      </PolicySection>
+
+      {/* ------------------------------------------------ */}
+
+      <PolicySection
+        title="Allowed Actions"
+        description="Choose which infrastructure actions Autopilot is allowed to perform."
+      >
+
+        <PolicySwitch
+          label="Stop Compute Resources"
+          description="Allow stopping EC2 instances or Virtual Machines."
+          checked={policy.allow_stop}
+          onChange={(v) => handleChange("allow_stop", v)}
+        />
+
+        <PolicySwitch
+          label="Resize Resources"
+          description="Allow CPU, memory or instance resizing."
+          checked={policy.allow_resize}
+          onChange={(v) => handleChange("allow_resize", v)}
+        />
+
+        <PolicySwitch
+          label="Delete Resources"
+          description="Allow deletion of idle resources."
+          checked={policy.allow_delete}
+          onChange={(v) => handleChange("allow_delete", v)}
+        />
+
+      </PolicySection>
+
+      {/* ------------------------------------------------ */}
+
+      <PolicySection
+        title="Advanced Safety"
+        description="Additional organization-wide execution controls."
+      >
+
+        <PolicyNumberInput
+          label="Maximum Concurrent Executions"
+          description="Maximum optimization tasks running simultaneously."
+          value={policy.max_concurrent_actions}
+          min={1}
+          onChange={(v) =>
+            handleChange("max_concurrent_actions", v)
+          }
+        />
+
+        <PolicyNumberInput
+          label="Approval Timeout"
+          description="Pending approvals expire automatically."
+          value={policy.approval_timeout_minutes}
+          suffix="min"
+          min={1}
+          onChange={(v) =>
+            handleChange("approval_timeout_minutes", v)
+          }
+        />
+
+      </PolicySection>
+
     </div>
   );
 }

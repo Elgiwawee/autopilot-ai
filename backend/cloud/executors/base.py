@@ -41,10 +41,53 @@ class CloudExecutor(ABC):
     ):
         raise NotImplementedError
 
-    def rollback(self, *, action, parameters=None):
-        raise NotImplementedError(
-            f"Rollback not implemented for {self.__class__.__name__}"
-        )
+
+    @abstractmethod
+    def verify(
+        self,
+        *,
+        target_type,
+        namespace,
+        target_name,
+        action,
+        parameters,
+    ):
+        """
+        Verify that the requested action was actually applied
+        by the cloud provider.
+
+        Returns:
+        {
+            "verified": bool,
+            "reason": str,
+            "actual_state": dict
+        }
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def rollback(
+        self,
+        *,
+        action,
+        current_state,
+        proposed_state,
+        target_type,
+        namespace,
+        target_name,
+        parameters,
+    ):
+        """
+        Restore the resource to its previous state.
+
+        Returns:
+
+        {
+            "success": bool,
+            "reason": str,
+        }
+        """
+        raise NotImplementedError
 
     def _find_resource(
         self,

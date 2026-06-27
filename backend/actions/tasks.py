@@ -1,3 +1,5 @@
+# actions/tasks.py
+
 import logging
 
 from celery import shared_task
@@ -5,6 +7,11 @@ from django.utils.timezone import now
 
 from accounts.models import GlobalSafety
 from actions.models import ActionExecution
+
+from ai_engine.policy_engine import PolicyEngine
+from ai_engine.approval_engine import ApprovalEngine
+from ai_engine.verification_engine import VerificationEngine
+from ai_engine.rollback_engine import RollbackEngine
 from ai_engine.reinforcement.trainer import RLTrainer
 from audit.services.writer import write_audit_log
 from billing.services.trigger import trigger_savings_computation
@@ -149,6 +156,86 @@ def execute_action(self, action_execution_id):
         )
         return
 
+        # ----------------------------------------------------
+    # Enterprise Policy Engine
+    # ----------------------------------------------------
+
+    policy_result = PolicyEngine.evaluate(plan)
+
+    if not policy_result.allowed:
+
+        execution.status = "failed"
+        execution.error_message = policy_result.reason
+        execution.save(
+            update_fields=[
+                "status",
+                "error_message",
+            ]
+        )
+
+        plan.status = "skipped_policy"
+        plan.save(update_fields=["status"])
+
+        write_audit_log(
+            organization=cloud_account.organization,
+            actor="AUTOPILOT",
+            action=action_type,
+            resource_id=resource_id,
+            status="POLICY_BLOCKED",
+            metadata={
+                "reason": policy_result.reason,
+                "risk": policy_result.risk_level,
+            },
+        )
+
+        logger.warning(
+            "Policy blocked execution for plan %s : %s",
+            plan.id,
+            policy_result.reason,
+        )
+
+        return
+
+
+    # ----------------------------------------------------
+    # Approval Engine
+    # ----------------------------------------------------
+
+    approval = ApprovalEngine.evaluate(plan)
+
+    if approval.requires_approval:
+
+        execution.status = "pending"
+        execution.error_message = approval.reason
+        execution.save(
+            update_fields=[
+                "status",
+                "error_message",
+            ]
+        )
+
+        plan.status = "planned"
+        plan.save(update_fields=["status"])
+
+        write_audit_log(
+            organization=cloud_account.organization,
+            actor="AUTOPILOT",
+            action=action_type,
+            resource_id=resource_id,
+            status="WAITING_APPROVAL",
+            metadata={
+                "reason": approval.reason,
+            },
+        )
+
+        logger.info(
+            "Execution waiting for approval: %s",
+            plan.id,
+        )
+
+        return
+
+
     execution.status = "executing"
     execution.save(update_fields=["status"])
 
@@ -208,6 +295,51 @@ def execute_action(self, action_execution_id):
         # ----------------------------------
         # SUCCESS
         # ----------------------------------
+        verification = VerificationEngine.verify(
+            executor=executor,
+            plan=plan,
+        )
+
+        if not verification.success:
+
+            rollback = RollbackEngine.rollback(
+                executor=executor,
+                plan=plan,
+            )
+
+            execution.status = "rolled_back"
+            execution.error_message = (
+                verification.reason
+                if rollback.success
+                else rollback.reason
+            )
+            execution.save(
+                update_fields=[
+                    "status",
+                    "error_message",
+                ]
+            )
+
+            plan.status = "rolled_back"
+            plan.save(
+                update_fields=["status"]
+            )
+
+            write_audit_log(
+                organization=cloud_account.organization,
+                actor="AUTOPILOT",
+                action=action_type,
+                resource_id=resource_id,
+                status="ROLLED_BACK",
+                metadata={
+                    "verification_reason": verification.reason,
+                    "rollback_reason": rollback.reason,
+                    "plan_id": str(plan.id),
+                },
+            )
+
+            return
+
         execution.status = "success"
         execution.executed_at = now()
         execution.error_message = None
@@ -220,7 +352,11 @@ def execute_action(self, action_execution_id):
         )
 
         plan.status = "committed"
-        plan.save(update_fields=["status"])
+        plan.save(
+            update_fields=[
+                "status",
+            ]
+        )
 
         write_audit_log(
             organization=cloud_account.organization,
