@@ -1,0 +1,79 @@
+version: "3.9"
+
+services:
+
+  backend:
+    image: autopilot-backend:latest
+    container_name: autopilot-backend
+
+    restart: unless-stopped
+
+    ports:
+      - "8000:8000"
+
+    depends_on:
+      - redis
+
+    volumes:
+      - ./backend:/app
+      - static_volume:/app/staticfiles
+
+    networks:
+      - autopilot
+
+
+  redis:
+    image: redis:7-alpine
+
+    container_name: autopilot-redis
+
+    restart: unless-stopped
+
+    networks:
+      - autopilot
+
+
+  celery:
+    image: autopilot-backend:latest
+
+    container_name: autopilot-celery
+
+    restart: unless-stopped
+
+    command: celery -A config worker -l info
+
+    depends_on:
+      - redis
+
+    volumes:
+      - ./backend:/app
+
+    networks:
+      - autopilot
+
+
+  celery-beat:
+    image: autopilot-backend:latest
+
+    container_name: autopilot-celery-beat
+
+    restart: unless-stopped
+
+    command: celery -A config beat -l info
+
+    depends_on:
+      - redis
+
+    volumes:
+      - ./backend:/app
+
+    networks:
+      - autopilot
+
+
+volumes:
+  static_volume:
+
+
+networks:
+  autopilot:
