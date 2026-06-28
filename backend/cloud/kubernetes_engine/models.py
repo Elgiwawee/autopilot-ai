@@ -113,7 +113,7 @@ class PodMetrics(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=["cluster_id", "namespace", "workload_name"]),
+            models.Index(fields=["cluster", "namespace", "workload_name"]),
         ]
 
 

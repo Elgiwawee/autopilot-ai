@@ -93,7 +93,7 @@ def collect_pod_metrics(self, cloud_account_id, cluster_id):
 
                 PodMetrics.objects.update_or_create(
                     cloud_account_id=cloud_account_id,
-                    cluster_id=cluster_id,
+                    cluster=cluster,
                     namespace=namespace,
                     pod=pod.metadata.name,
                     defaults={
