@@ -1,4 +1,3 @@
-version: "3.9"
 
 services:
 
@@ -18,7 +17,7 @@ services:
       - redis
 
     volumes:
-      - ./backend:/app
+      - .:/app
       - static_volume:/app/staticfiles
 
     networks:
@@ -49,7 +48,7 @@ services:
       - redis
 
     volumes:
-      - ./backend:/app
+      - .:/app
 
     networks:
       - autopilot
@@ -71,7 +70,7 @@ services:
       - redis
 
     volumes:
-      - ./backend:/app
+      - .:/app
 
     networks:
       - autopilot
