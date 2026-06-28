@@ -3,7 +3,7 @@
 from celery import shared_task
 from django.db import transaction
 from kubernetes.client.exceptions import ApiException
-from cloud.kubernetes_engine.models import KubernetesCluster, PodMetrics
+from cloud.models import KubernetesCluster, PodMetrics
 from cloud.kubernetes_engine.client import KubernetesClient
 from cloud.kubernetes_engine.metrics import (
     extract_requests,

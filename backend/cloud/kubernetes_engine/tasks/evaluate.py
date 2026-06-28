@@ -7,7 +7,7 @@ from cloud.kubernetes_engine.observer import observe_canary
 from cloud.kubernetes_engine.rollback import rollback_execution
 from cloud.kubernetes_engine.client import KubernetesClient
 from actions.models import  ExecutionRecord
-from cloud.kubernetes_engine.models import CanaryWindow
+from cloud.models import CanaryWindow
 from cloud.kubernetes_engine.tasks.commit import commit_execution
 
 @shared_task(bind=True)
