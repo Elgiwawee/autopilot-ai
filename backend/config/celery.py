@@ -28,7 +28,7 @@ app.conf.beat_schedule = {
 
     # Kubernetes metrics
     "collect-k8s-metrics": {
-        "task": "cloud.kubernetes_engine.tasks.metrics.collect_pod_metrics",
+        "task": "cloud.kubernetes_engine.tasks.metrics.collect_all_cluster_metrics",
         "schedule": crontab(minute="*/5"),
     },
 
