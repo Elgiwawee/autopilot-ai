@@ -267,7 +267,7 @@ class InstancePricing(models.Model):
 
 
 class GPUMetrics(models.Model):
-    cloud_account = models.ForeignKey("cloud.CloudAccount", on_delete=models.CASCADE)
+    cloud_account = models.ForeignKey(CloudAccount, on_delete=models.CASCADE)
     cluster_id = models.CharField(max_length=128)
 
     namespace = models.CharField(max_length=64)
@@ -304,7 +304,7 @@ class CanaryWindow(models.Model):
 
 class KubernetesCluster(models.Model):
     cloud_account = models.ForeignKey(
-        "cloud.CloudAccount",
+        CloudAccount,
         on_delete=models.CASCADE,
         related_name="kubernetes_clusters",
     )
@@ -349,7 +349,7 @@ class KubernetesCluster(models.Model):
 
 
 class PodMetrics(models.Model):
-    cloud_account = models.ForeignKey("cloud.CloudAccount", on_delete=models.CASCADE)
+    cloud_account = models.ForeignKey(CloudAccount, on_delete=models.CASCADE)
     cluster = models.ForeignKey(
         KubernetesCluster,
         on_delete=models.CASCADE,
