@@ -4,9 +4,8 @@ import uuid
 from django.db import models
 from django.contrib.postgres.fields import JSONField
 from accounts.models import Organization
-from django.apps import apps
+from actions.models import ExecutionPlan
 
-ExecutionPlan = apps.get_model("actions", "ExecutionPlan")
 
 class CloudProvider(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
