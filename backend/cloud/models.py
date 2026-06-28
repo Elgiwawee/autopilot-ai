@@ -4,7 +4,6 @@ import uuid
 from django.db import models
 from django.contrib.postgres.fields import JSONField
 from accounts.models import Organization
-from actions.models import ExecutionPlan
 
 
 class CloudProvider(models.Model):
@@ -289,7 +288,7 @@ class GPUMetrics(models.Model):
 
 class CanaryWindow(models.Model):
     execution_plan = models.OneToOneField(
-        ExecutionPlan, on_delete=models.CASCADE
+        "actions.ExecutionPlan", on_delete=models.CASCADE
     )
 
     start_time = models.DateTimeField()
