@@ -109,7 +109,7 @@ DATABASES = {
         'NAME': 'autopilot_db',
         'USER': 'autopilot_user',
         'PASSWORD': 'Deeny@442',
-        'HOST': 'localhost',
+        'HOST': 'host.docker.internal',
         'PORT': '5432',
     }
 }
