@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: django-debug
+  namespace: autopilot
+
+spec:
+  restartPolicy: Never
+
+  containers:
+    - name: django-debug
+
+      image: 843141572984.dkr.ecr.eu-north-1.amazonaws.com/autopilot-backend:latest
+
+      command:
+        - sleep
+        - "3600"
+
+      stdin: true
+      tty: true
+
+      envFrom:
+        - configMapRef:
+            name: autopilot-config
+
+        - secretRef:
+            name: autopilot-secret
