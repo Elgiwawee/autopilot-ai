@@ -11,7 +11,7 @@ data:
   REDIS_HOST: redis-service
   REDIS_PORT: "6379"
 
-  DATABASE_HOST: host.docker.internal
+  DATABASE_HOST: autopilot-db.c50acysmivkc.eu-north-1.rds.amazonaws.com
   DATABASE_PORT: "5432"
   DATABASE_NAME: autopilot_db
 

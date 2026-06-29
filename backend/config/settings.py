@@ -103,14 +103,15 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 # settings.py
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'autopilot_db',
-        'USER': 'autopilot_user',
-        'PASSWORD': 'Deeny@442',
-        'HOST': 'host.docker.internal',
-        'PORT': '5432',
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DATABASE_NAME", "autopilot_db"),
+        "USER": os.getenv("DATABASE_USER", "autopilot_user"),
+        "PASSWORD": os.getenv("DATABASE_PASSWORD"),
+        "HOST": os.getenv("DATABASE_HOST"),
+        "PORT": os.getenv("DATABASE_PORT", "5432"),
     }
 }
 
