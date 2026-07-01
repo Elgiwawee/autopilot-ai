@@ -1,4 +1,4 @@
-# config/urls.py
+# backend/config/urls.py
 
 """
 URL configuration for config project.
