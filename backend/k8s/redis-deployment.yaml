@@ -39,6 +39,13 @@ spec:
 
         imagePullPolicy: IfNotPresent
 
+        command:
+          - redis-server
+          - --save
+          - ""
+          - --appendonly
+          - "no"
+
         ports:
 
         - containerPort: 6379
@@ -74,8 +81,3 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: false
-
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        fsGroup: 1000
