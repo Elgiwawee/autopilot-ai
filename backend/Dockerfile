@@ -41,7 +41,9 @@ COPY . .
 # Static
 # ---------------------------------------------------
 
-RUN mkdir -p /app/staticfiles
+RUN mkdir -p /app/staticfiles \
+    && chmod -R 775 /app \
+    && chmod -R 777 /app/staticfiles
 
 # ---------------------------------------------------
 # Entrypoint
