@@ -30,13 +30,8 @@ SECRET_KEY = 'django-insecure-uky^g#)p%ew2ui$z0w!+-)ny_*j(8-oj@w4njz@@won8mb^r!*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = [
-    "127.0.0.1",
-    "localhost",
-    "autopilotops.cloud",
-    "www.autopilotops.cloud",
-    "api.autopilotops.cloud",
-]
+
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 
 
 # Application definition
