@@ -29,11 +29,7 @@ def health_check(request):
     except Exception:
         redis_status = "error"
 
-    overall = (
-        "healthy"
-        if db_status == "ok" and redis_status == "ok"
-        else "unhealthy"
-    )
+    overall = "healthy" if db_status == "ok" else "unhealthy"
 
     status_code = 200 if overall == "healthy" else 503
 
