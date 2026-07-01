@@ -6,16 +6,23 @@ metadata:
   namespace: autopilot
 
 data:
+
   DJANGO_SETTINGS_MODULE: config.settings
 
-  REDIS_HOST: redis-service
-  REDIS_PORT: "6379"
+  PYTHONUNBUFFERED: "1"
 
   DATABASE_HOST: autopilot-db-v2.c50acysmivkc.eu-north-1.rds.amazonaws.com
   DATABASE_PORT: "5430"
   DATABASE_NAME: autopilot_db
 
+  REDIS_HOST: redis-service
+  REDIS_PORT: "6379"
+
   CELERY_BROKER_URL: redis://redis-service:6379/0
   CELERY_RESULT_BACKEND: redis://redis-service:6379/0
 
-  PYTHONUNBUFFERED: "1"
+  ALLOWED_HOSTS: "*"
+
+  DJANGO_DEBUG: "False"
+
+  LOG_LEVEL: INFO

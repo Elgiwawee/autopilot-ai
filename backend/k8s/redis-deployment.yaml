@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: redis
+  namespace: autopilot
+
+  labels:
+    app: redis
+
+spec:
+  replicas: 1
+
+  revisionHistoryLimit: 3
+
+  selector:
+    matchLabels:
+      app: redis
+
+  strategy:
+    type: Recreate
+
+  template:
+
+    metadata:
+
+      labels:
+        app: redis
+
+    spec:
+
+      terminationGracePeriodSeconds: 30
+
+      containers:
+
+      - name: redis
+
+        image: redis:7.2-alpine
+
+        imagePullPolicy: IfNotPresent
+
+        ports:
+
+        - containerPort: 6379
+
+        resources:
+
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+
+        livenessProbe:
+
+          tcpSocket:
+            port: 6379
+
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 5
+
+        readinessProbe:
+
+          tcpSocket:
+            port: 6379
+
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000

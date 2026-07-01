@@ -3,3 +3,7 @@ kind: Namespace
 
 metadata:
   name: autopilot
+
+  labels:
+    app.kubernetes.io/name: autopilot
+    app.kubernetes.io/environment: production
