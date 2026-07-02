@@ -4,12 +4,9 @@ kind: Ingress
 metadata:
   name: autopilot-ingress
   namespace: autopilot
-
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
-
-    # IMPORTANT
     alb.ingress.kubernetes.io/healthcheck-path: /health/
     alb.ingress.kubernetes.io/healthcheck-port: traffic-port
     alb.ingress.kubernetes.io/success-codes: "200"
@@ -17,14 +14,14 @@ metadata:
 spec:
   ingressClassName: alb
 
-  rules::
-  - host: api.autopilotops.cloud
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: backend-service
-            port:
-              number: 80
+  rules:
+    - host: api.autopilotops.cloud
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 80
