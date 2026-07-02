@@ -6,7 +6,6 @@ metadata:
   namespace: autopilot
 
   annotations:
-    kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
 
@@ -16,7 +15,9 @@ metadata:
     alb.ingress.kubernetes.io/success-codes: "200"
 
 spec:
-  rules:
+  ingressClassName: alb
+
+  rules::
   - host: api.autopilotops.cloud
     http:
       paths:
